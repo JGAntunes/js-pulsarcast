@@ -1,0 +1,24 @@
+{
+  "name": "pulsarcast",
+  "version": "0.1.0",
+  "description": "A libp2p compatible pubsub module of the pulsarcast system",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JGAntunes/js-pulsarcast.git"
+  },
+  "keywords": [
+    "pubsub",
+    "libp2p",
+    "pulsarcast"
+  ],
+  "author": "João Antunes <me@jgantunes.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/JGAntunes/js-pulsarcast/issues"
+  },
+  "homepage": "https://github.com/JGAntunes/js-pulsarcast#readme"
+}
