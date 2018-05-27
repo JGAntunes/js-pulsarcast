@@ -4,7 +4,9 @@
   "description": "A libp2p compatible pubsub module of the pulsarcast system",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Such tests, very wow\"",
+    "test:ci": "npm run lint && npm test",
+    "lint": "standard .  | snazzy"
   },
   "repository": {
     "type": "git",
@@ -20,5 +22,12 @@
   "bugs": {
     "url": "https://github.com/JGAntunes/js-pulsarcast/issues"
   },
-  "homepage": "https://github.com/JGAntunes/js-pulsarcast#readme"
+  "homepage": "https://github.com/JGAntunes/js-pulsarcast#readme",
+  "dependencies": {
+    "debug": "^3.1.0"
+  },
+  "devDependencies": {
+    "snazzy": "^7.1.1",
+    "standard": "^11.0.1"
+  }
 }
