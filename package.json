@@ -24,7 +24,8 @@
   },
   "homepage": "https://github.com/JGAntunes/js-pulsarcast#readme",
   "dependencies": {
-    "debug": "^3.1.0"
+    "debug": "^3.1.0",
+    "protons": "^1.0.1"
   },
   "devDependencies": {
     "snazzy": "^7.1.1",
