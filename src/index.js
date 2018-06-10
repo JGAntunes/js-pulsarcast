@@ -84,6 +84,7 @@ class Pulsarcast extends EventEmitter {
 
   _onConnectionEnd (idB58Str, peer, err) {
     log(`Error from ${idB58Str}`, err)
+    // TODO clear connection and peer state
   }
 
   start (callback) {
