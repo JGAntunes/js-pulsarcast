@@ -79,7 +79,12 @@ class Pulsarcast extends EventEmitter {
   }
 
   _onRPC (idB58Str, rpc) {
-    log(`Message from ${idB58Str}`)
+    log(`RPC message from ${idB58Str}`)
+    // Check if we have any RPC msgs 
+    if (!rpc || !rpc.msgs) return
+
+    // TODO Async iterate over the rpc.msgs, identify the type of operation
+    // and call the respective handler
   }
 
   _onConnectionEnd (idB58Str, peer, err) {
