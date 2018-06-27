@@ -1,29 +1,47 @@
 'use strict'
 
 // const log = require('utils/logger')
+const ops = require('../messages').rpc.RPC.Operation
 
 function createRPCHandlers (pulsarcastNode) {
   return {
     event,
     update,
     join,
-    leave
+    leave,
+    genericHandler
   }
 
-  function event (id, message) {
-
-  }
-
-  function update (id, message) {
+  function event (idB58Str, message) {
 
   }
 
-  function join (id, message) {
+  function update (idB58Str, message) {
 
   }
 
-  function leave (id, message) {
+  function join (idB58Str, message) {
 
+  }
+
+  function leave (idB58Str, message) {
+
+  }
+
+  function genericHandler (idB58Str, message) {
+    // TODO perform generic validation here
+    switch (message.op) {
+      // case ops.PING:
+      //   return ping(idB58Str, message)
+      case ops.UPDATE:
+        return update(idB58Str, message)
+      case ops.EVENT:
+        return event(idB58Str, message)
+      case ops.JOIN:
+        return join(idB58Str, message)
+      case ops.LEAVE:
+        return leave(idB58Str, message)
+    }
   }
 }
 

@@ -10,7 +10,7 @@ const log = require('utils/logger')
 const pb = require('./messages')
 const { protocol } = require('./config')
 const Peer = require('./peer')
-const rpc = require('./rpc')
+const CreateRpcHandlers = require('./rpc')
 
 class Pulsarcast extends EventEmitter {
   constructor (libp2p) {
@@ -35,7 +35,7 @@ class Pulsarcast extends EventEmitter {
     this._onConnection = this._onConnection.bind(this)
 
     // Create our handlers to receive and send RPC messages
-    this.rpc = rpc(this)
+    this.rpc = CreateRpcHandlers(this)
   }
 
   _addPeer (peerInfo, conn) {
@@ -56,6 +56,7 @@ class Pulsarcast extends EventEmitter {
     conn.getPeerInfo((err, peerInfo) => {
       if (err) {
         log.err('Failed to identify incomming conn', err)
+        // Terminate the pull stream
         return pull(pull.empty(), conn)
       }
 
@@ -80,11 +81,10 @@ class Pulsarcast extends EventEmitter {
 
   _onRPC (idB58Str, rpc) {
     log(`RPC message from ${idB58Str}`)
-    // Check if we have any RPC msgs 
+    // Check if we have any RPC msgs
     if (!rpc || !rpc.msgs) return
 
-    // TODO Async iterate over the rpc.msgs, identify the type of operation
-    // and call the respective handler
+    rpc.msgs.forEach((msg) => this.rpc.receive.genericHandler(idB58Str, msg))
   }
 
   _onConnectionEnd (idB58Str, peer, err) {
