@@ -2,6 +2,7 @@
 
 const Joi = require('joi-browser')
 const bs58 = require('bs58')
+const log = require('../utils/logger')
 
 // const log = require('utils/logger')
 const ops = require('../messages').rpc.RPC.Operation
@@ -32,20 +33,21 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   function event (idB58Str, message) {
-
+    log.trace(`Got event from  ${idB58Str}`)
   }
 
   function update (idB58Str, message) {
-
+    log.trace(`Got update from  ${idB58Str}`)
   }
 
   function join (idB58Str, message) {
+    log.trace(`Got update from  ${idB58Str}`)
     // TODO perform join validation here
-    const topic = message.topic
+    // const topic = message.topic
   }
 
   function leave (idB58Str, message) {
-
+    log.trace(`Got leave from  ${idB58Str}`)
   }
 
   function genericHandler (idB58Str, message) {
