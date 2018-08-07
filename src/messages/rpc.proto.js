@@ -14,24 +14,19 @@ message RPC {
   }
 
   message EventDescriptor {
-
-    optional bytes publisher = 1;
-    optional bytes payload = 2;
-    optional bytes parent = 3;
-    optional MetaData metadata = 4;
-
-    message MetaData {
+    
+    message EventMetaData {
       optional string created = 1;
       optional string protocolVersion = 2;
     }
 
-    message Topic {
-      optional string name = 1;
-      optional string link = 2;
-    }
+    optional bytes publisher = 1;
+    optional bytes payload = 2;
+    optional bytes parent = 3;
+    optional EventMetaData metadata = 4;
   }
 
-  message Neighbours {
+  message PeerTree {
     repeated bytes parents = 1;
     repeated bytes children = 2;
   }
@@ -40,7 +35,13 @@ message RPC {
     optional Operation op = 1;
     optional bytes topic = 2;
     optional EventDescriptor event = 3;
-    optional Neighbours neighbours = 4;
+    optional PeerTree peerTree = 4;
+    optional MessageMetaData metadata = 5;
+  }
+
+  message MessageMetaData {
+    optional string created = 1;
+    optional string protocolVersion = 2;
   }
 
   repeated Message msgs = 1;

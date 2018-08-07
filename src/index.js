@@ -32,6 +32,9 @@ class Pulsarcast extends EventEmitter {
      */
     this.subscriptions = new Set()
 
+    // This will store the peer neighbours
+    this.me = new Peer(libp2p.peerInfo)
+
     this._onConnection = this._onConnection.bind(this)
 
     // Create our handlers to receive and send RPC messages

@@ -15,10 +15,17 @@ const event = Joi.object().keys({
   metadata
 })
 
+const peerTree = Joi.object().keys({
+  parents: Joi.array().items(Joi.binary()).required(),
+  children: Joi.array().items(Joi.binary()).required()
+})
+
 const rpc = Joi.object().keys({
   op: Joi.number().integer().valid(Object.values(ops)).required(),
   topic: Joi.binary().required(),
-  event
+  event,
+  metadata,
+  peerTree
 }).required()
 
 module.exports = rpc
