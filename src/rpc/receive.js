@@ -1,39 +1,11 @@
 'use strict'
 
 const Joi = require('joi-browser')
-const bs58 = require('bs58')
 
 const log = require('../utils/logger')
-const ops = require('../messages').rpc.RPC.Operation
-const schemas = require('../messages').schemas
+const { protobuffers, schemas, marshalling } = require('../messages')
 
-function unmarshallMessage (message) {
-  // TODO improve code unmarshalling
-  const result = {}
-  result.topic = bs58.encode(message.topic)
-  result.metadata = message.metadata
-
-  if (message.event) {
-    result.event = {
-      publisher: bs58.encode(message.event.publisher),
-      payload: JSON.stringify(message.event.payload.toString('utf8')),
-      parent: bs58.encode(message.event.parent),
-      metadata: message.event.metadata
-    }
-    // Convert OP to a valid uppercase string
-    result.op = Object.entries(ops).find(([op, value]) => {
-      return value === message.op
-    })[0]
-  }
-
-  if (message.peerTree) {
-    result.peerTree = {
-      parents: message.peerTree.parents.map(parent => bs58.encode(parent)),
-      children: message.peerTree.children.map(child => bs58.encode(child))
-    }
-  }
-  return result
-}
+const ops = protobuffers.rpc.RPC.Operation
 
 function createRPCHandlers (pulsarcastNode) {
   return {
@@ -74,6 +46,7 @@ function createRPCHandlers (pulsarcastNode) {
     // The peer should already be in the list given that
     // we received a message from it
     const child = peers.get(idB58Str)
+    // TODO get the actual topic from the DHT
     me.addChildren(message.topic, [child])
     // Check if you have a set of parents for this topic
     if (me.tree.get(message.topic).parents > 0) {
@@ -103,7 +76,7 @@ function createRPCHandlers (pulsarcastNode) {
     }
     // We use the resulting message from the validation
     // with type coercion
-    const jsonMessage = unmarshallMessage(result.message)
+    const jsonMessage = marshalling.unmarshall(result.message)
 
     switch (jsonMessage.op) {
       // case ops.PING:

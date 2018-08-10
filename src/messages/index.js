@@ -1,13 +1,13 @@
 'use strict'
 
-const protons = require('protons')
-
-const rpc = protons(require('./rpc.proto'))
-const topic = protons(require('./topic.proto'))
+const protobuffers = require('./protobuffers')
 const schemas = require('./schemas')
+const createMessage = require('./create-message')
+const marshalling = require('./marshalling')
 
 module.exports = {
-  rpc,
-  topic,
-  schemas
+  protobuffers,
+  schemas,
+  createMessage,
+  marshalling
 }
