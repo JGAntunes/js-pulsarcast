@@ -19,14 +19,16 @@ function createRPCHandlers (pulsarcastNode) {
   function event (idB58Str, message) {
     log.trace(`Got event from  ${idB58Str}`)
 
+    // Only consider the message if we have data
+    if (!message.event) return
+
     const {subscriptions} = pulsarcastNode
     // We're subscribed to this topic, emit the message
     if (subscriptions.has(message.topic)) {
       pulsarcastNode.emit(message.topic, message.event)
     }
 
-    // TODO forward event
-    pulsarcastNode.rpc.send.event()
+    pulsarcastNode.rpc.send.event(message.topic, message.event, idB58Str)
   }
 
   function update (idB58Str, message) {
@@ -40,7 +42,7 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   function join (idB58Str, message) {
-    log.trace(`Got update from  ${idB58Str}`)
+    log.trace(`Got join from  ${idB58Str}`)
 
     const {me, peers} = pulsarcastNode
     // The peer should already be in the list given that
@@ -54,8 +56,8 @@ function createRPCHandlers (pulsarcastNode) {
       // TODO take care of delivering initial state
       return
     }
-    // TODO send join
-    pulsarcastNode.rpc.send.join()
+
+    pulsarcastNode.rpc.send.join(message.topic)
   }
 
   function leave (idB58Str, message) {

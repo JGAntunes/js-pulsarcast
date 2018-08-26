@@ -1,8 +1,12 @@
 'use strict'
 
+const Pushable = require('pull-pushable')
+const lp = require('pull-length-prefixed')
+const pull = require('pull-stream')
 const EventEmitter = require('events')
 const assert = require('assert')
 
+const rpc = require('./message').rpc.RPC
 // const log = require('utils/logger')
 
 class Peer extends EventEmitter {
@@ -10,9 +14,14 @@ class Peer extends EventEmitter {
     assert(peerInfo, 'Need a peerInfo object to initiate the peer')
     super()
 
+    this.stream = null
     this.conn = conn
     this.info = peerInfo
     this.trees = new Map()
+
+    if (conn) {
+      this.attachConnection(conn)
+    }
   }
 
   isConnected () {
@@ -23,7 +32,24 @@ class Peer extends EventEmitter {
     if (this.conn) {
       // TODO close previously existing connection
     }
+    this.stream = new Pushable()
     this.conn = conn
+
+    pull(
+      this.stream,
+      lp.encode(),
+      conn,
+      pull.onEnd(() => {
+        this.conn = null
+        this.stream = null
+        this.emit('close')
+      })
+    )
+  }
+
+  sendMessages (messages) {
+    const toSend = rpc.encode(messages)
+    this.stream.push(toSend)
   }
 
   updateTree (topic, {parents = [], children = []}) {

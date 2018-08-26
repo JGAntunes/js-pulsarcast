@@ -2,12 +2,12 @@
 
 const protobuffers = require('./protobuffers')
 const schemas = require('./schemas')
-const createMessage = require('./create-message')
+const createRPC = require('./create-rpc')
 const marshalling = require('./marshalling')
 
 module.exports = {
   protobuffers,
   schemas,
-  createMessage,
+  createRPC,
   marshalling
 }

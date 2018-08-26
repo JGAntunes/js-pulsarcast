@@ -1,8 +1,7 @@
 'use strict'
 
 const config = require('../config')
-
-// TODO NEXT - these messages
+const ops = require('../messages').rpc.RPC.Operation
 
 function createMetadata () {
   const now = new Date()
@@ -12,22 +11,36 @@ function createMetadata () {
   }
 }
 
-function update (topic) {
+function update (topic, {parents, children}) {
+  const metadata = createMetadata()
   return {
+    op: ops.UPDATE,
     topic,
-    metadata: createMetadata()
+    metadata,
+    peerTree: {
+      parents,
+      children
+    }
   }
 }
 
-function event (topic) {
+function event (topic, {publisher, parent, payload, metadata = createMetadata()}) {
   return {
+    op: ops.EVENT,
     topic,
-    metadata: createMetadata()
+    metadata,
+    event: {
+      publisher,
+      parent,
+      payload,
+      metadata
+    }
   }
 }
 
 function join (topic) {
   return {
+    op: ops.JOIN,
     topic,
     metadata: createMetadata()
   }
@@ -35,6 +48,7 @@ function join (topic) {
 
 function leave (topic) {
   return {
+    op: ops.LEAVE,
     topic,
     metadata: createMetadata()
   }

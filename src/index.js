@@ -13,10 +13,12 @@ const Peer = require('./peer')
 const CreateRpcHandlers = require('./rpc')
 
 class Pulsarcast extends EventEmitter {
-  constructor (libp2p) {
+  // TODO for now we're receiving an instance of IPLD
+  constructor (libp2p, ipld) {
     super()
 
     this.libp2p = libp2p
+    this.ipld = ipld
     this.started = false
 
     /**
