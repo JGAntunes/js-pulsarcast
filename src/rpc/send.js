@@ -8,27 +8,25 @@ function createRPCHandlers (pulsarcastNode) {
   const dht = pulsarcastNode.libp2p.dht
 
   return {
-    join,
     event,
-    leave
-  }
-
-  // Join finds the closest peer to the topic CID
-  // and sends the rpc join message
-  function join (topic) {
-    const rpc = createRPC.join(topic)
-
-    // Get the closest peer stored locally
-    const closestPeerId = dht.routingTable.closestPeer(topic, 1)
-    send(closestPeerId.toB58Str(), rpc)
+    topic: {
+      join: joinTopic,
+      leave: leaveTopic,
+      new: newTopic
+    }
   }
 
   function event (topic, event, fromIdB58Str) {
     const { parents, children } = pulsarcastNode.me.trees.get(topic)
     const rpc = createRPC.event(topic, event)
     // RPC message is being created at this node, not just forwardind,
-    // so propagate it through our whole topic tree
+    // so add it on IPLD and propagate it through our whole topic tree
     if (!fromIdB58Str) {
+      pulsarcastNode.ipld.put(rpc.event, {format: 'dag-cbor'}, (err, cid) => {
+        console.log(cid)
+        // TODO handle errors
+      })
+
       parents.forEach(parent => send(parent.info.id.toB58Str(), rpc))
       children.forEach(child => send(child.info.id.toB58Str(), rpc))
       return
@@ -46,8 +44,28 @@ function createRPCHandlers (pulsarcastNode) {
     }
   }
 
-  function leave (topic) {
+  // Join finds the closest peer to the topic CID
+  // and sends the rpc join message
+  function joinTopic (topic) {
+    const rpc = createRPC.topic.join(topic)
+
+    // Get the closest peer stored locally
+    const closestPeerId = dht.routingTable.closestPeer(topic, 1)
+    send(closestPeerId.toB58Str(), rpc)
+  }
+
+  function leaveTopic (topic) {
     // TODO
+  }
+
+  // TODO for now only put topic descriptor in IPLD
+  function newTopic (name, options) {
+    const rpc = createRPC.topic.new(name, options)
+
+    pulsarcastNode.ipld.put(rpc.topic, {format: 'dag-cbor'}, (err, cid) => {
+      console.log(cid)
+      // TODO handle errors
+    })
   }
 
   function send (idB58Str, rpc) {
