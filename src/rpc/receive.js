@@ -5,7 +5,7 @@ const Joi = require('joi-browser')
 const log = require('../utils/logger')
 const { protobuffers, schemas, marshalling } = require('../messages')
 
-const ops = protobuffers.rpc.RPC.Operation
+const ops = protobuffers.RPC.Operation
 
 function createRPCHandlers (pulsarcastNode) {
   return {
@@ -24,11 +24,11 @@ function createRPCHandlers (pulsarcastNode) {
 
     const {subscriptions} = pulsarcastNode
     // We're subscribed to this topic, emit the message
-    if (subscriptions.has(message.topic)) {
-      pulsarcastNode.emit(message.topic, message.event)
+    if (subscriptions.has(message.event.topic)) {
+      pulsarcastNode.emit(message.event.topic, message.event)
     }
 
-    pulsarcastNode.rpc.send.event(message.topic, message.event, idB58Str)
+    pulsarcastNode.rpc.send.event(message.event.topic, message.event, idB58Str)
   }
 
   function update (idB58Str, message) {
@@ -38,7 +38,7 @@ function createRPCHandlers (pulsarcastNode) {
     if (!message.peerTree) return
 
     const {peers} = pulsarcastNode
-    peers.get(idB58Str).updateTree(message.topic, message.peerTree)
+    peers.get(idB58Str).updateTree(message.peerTree.topic, message.peerTree)
   }
 
   function join (idB58Str, message) {
@@ -49,15 +49,15 @@ function createRPCHandlers (pulsarcastNode) {
     // we received a message from it
     const child = peers.get(idB58Str)
     // TODO get the actual topic from the DHT
-    me.addChildren(message.topic, [child])
+    me.addChildren(message.topicId, [child])
     // Check if you have a set of parents for this topic
-    if (me.tree.get(message.topic).parents > 0) {
+    if (me.tree.get(message.topicId).parents > 0) {
       // Peer already connected
       // TODO take care of delivering initial state
       return
     }
 
-    pulsarcastNode.rpc.send.join(message.topic)
+    pulsarcastNode.rpc.send.join(message.topicId)
   }
 
   function leave (idB58Str, message) {
@@ -87,9 +87,9 @@ function createRPCHandlers (pulsarcastNode) {
         return update(idB58Str, jsonMessage)
       case ops.EVENT:
         return event(idB58Str, jsonMessage)
-      case ops.JOIN:
+      case ops.JOIN_TOPIC:
         return join(idB58Str, jsonMessage)
-      case ops.LEAVE:
+      case ops.LEAVE_TOPIC:
         return leave(idB58Str, jsonMessage)
     }
   }

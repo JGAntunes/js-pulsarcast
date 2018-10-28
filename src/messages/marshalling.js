@@ -2,7 +2,7 @@
 
 const bs58 = require('bs58')
 
-const ops = require('./protobuffers').rpc.RPC.Operation
+const ops = require('./protobuffers').RPC.Operation
 
 function unmarshall (message) {
   // TODO improve code unmarshalling
