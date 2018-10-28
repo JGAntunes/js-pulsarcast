@@ -2,7 +2,8 @@
 
 const { createRPC, marshalling } = require('../messages')
 const log = require('../utils/logger')
-// const ops = require('../messages').rpc.RPC.Operation
+const { protobuffers } = require('./messages')
+const RPC = protobuffers.RPC
 
 function createRPCHandlers (pulsarcastNode) {
   const dht = pulsarcastNode.libp2p.dht
@@ -73,7 +74,8 @@ function createRPCHandlers (pulsarcastNode) {
 
     const rpcToSend = marshalling.marshall(rpc)
     const peer = pulsarcastNode.peers.get(idB58Str)
-    peer.sendMessages([rpcToSend])
+    const encodedMessage = RPC.encode([rpcToSend])
+    peer.sendMessages(encodedMessage)
   }
 }
 

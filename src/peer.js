@@ -6,7 +6,6 @@ const pull = require('pull-stream')
 const EventEmitter = require('events')
 const assert = require('assert')
 
-const rpc = require('./message').rpc.RPC
 // const log = require('utils/logger')
 
 class Peer extends EventEmitter {
@@ -48,8 +47,7 @@ class Peer extends EventEmitter {
   }
 
   sendMessages (messages) {
-    const toSend = rpc.encode(messages)
-    this.stream.push(toSend)
+    this.stream.push(messages)
   }
 
   updateTree (topic, {parents = [], children = []}) {
