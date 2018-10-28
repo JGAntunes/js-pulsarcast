@@ -7,7 +7,7 @@ const pull = require('pull-stream')
 
 const log = require('utils/logger')
 
-const pb = require('./messages')
+const { protobuffers } = require('./messages')
 const { protocol } = require('./config')
 const Peer = require('./peer')
 const CreateRpcHandlers = require('./rpc')
@@ -76,7 +76,7 @@ class Pulsarcast extends EventEmitter {
     pull(
       conn,
       lp.decode(),
-      pull.map((data) => pb.rpc.RPC.decode(data)),
+      pull.map((data) => protobuffers.RPC.decode(data)),
       pull.drain(
         (rpc) => this._onRPC(idB58Str, rpc),
         (err) => this._onConnectionEnd(idB58Str, peer, err)
@@ -103,25 +103,48 @@ class Pulsarcast extends EventEmitter {
     }
 
     this.libp2p.handle(protocol, this._onConnection)
+    this.started = true
   }
 
   stop (callback) {
     if (!this.started) {
       return setImmediate(() => callback(new Error('not started yet')))
     }
+    // TODO
   }
 
-  publish (topics, messages) {
+  publish (topic, message) {
     assert(this.started, 'Pulsarcast is not started')
+
+    const event = {
+      publisher: this.me.info.id.toB58Str(),
+      payload: Buffer.from(message, 'utf8'),
+      parent: null
+    }
+
+    this.rpc.send.event(topic, event)
   }
 
-  subscribe (topics) {
+  subscribe (topic) {
     assert(this.started, 'Pulsarcast is not started')
+
+    this.rpc.send.topic.join(topic)
   }
 
   unsubscribe (topics) {
     // Avoid race conditions, by quietly ignoring unsub when shutdown.
     // if (!this.started) return
+  }
+
+  createTopic (topicName, { parent = null } = {}) {
+    assert(this.started, 'Pulsarcast is not started')
+
+    const options = {
+      author: this.me.info.id.toB58Str(),
+      parent,
+      '#': {}
+    }
+    this.rpc.send.topic.new(topicName, options)
   }
 }
 
