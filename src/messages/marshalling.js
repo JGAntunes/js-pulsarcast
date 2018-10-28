@@ -7,36 +7,62 @@ const ops = require('./protobuffers').rpc.RPC.Operation
 function unmarshall (message) {
   // TODO improve code unmarshalling
   const result = {}
-  result.topic = bs58.encode(message.topic)
   result.metadata = message.metadata
+
+  if (message.topicId) {
+    result.topicId = bs58.encode(message.topicId)
+  }
+
+  if (message.topic) {
+    result.topic = {
+      author: bs58.encode(message.topic.author),
+      parent: bs58.encode(message.topic.parent),
+      ...message.topic
+    }
+  }
 
   if (message.event) {
     result.event = {
+      topic: bs58.encode(message.event.topic),
       publisher: bs58.encode(message.event.publisher),
       payload: JSON.stringify(message.event.payload.toString('utf8')),
       parent: bs58.encode(message.event.parent),
-      metadata: message.event.metadata
+      ...message.event
     }
-    // Convert OP to a valid uppercase string
-    result.op = Object.entries(ops).find(([op, value]) => {
-      return value === message.op
-    })[0]
   }
 
   if (message.peerTree) {
     result.peerTree = {
       parents: message.peerTree.parents.map(parent => bs58.encode(parent)),
-      children: message.peerTree.children.map(child => bs58.encode(child))
+      children: message.peerTree.children.map(child => bs58.encode(child)),
+      topic: bs58.encode(message.peerTree.topic)
     }
   }
+
+  // Convert OP to a valid uppercase string
+  result.op = Object.entries(ops).find(([op, value]) => {
+    return value === message.op
+  })[0]
+
   return result
 }
 
 function marshall (message) {
   // TODO improve code marshalling
   const result = {}
-  result.topic = bs58.decode(message.topic)
   result.metadata = message.metadata
+
+  if (message.topicId) {
+    result.topicId = bs58.decode(message.topicId)
+  }
+
+  if (message.topic) {
+    result.topic = {
+      author: bs58.decode(message.topic.author),
+      parent: bs58.decode(message.topic.parent),
+      ...message.topic
+    }
+  }
 
   if (message.event) {
     result.event = {
@@ -45,18 +71,21 @@ function marshall (message) {
       parent: bs58.decode(message.event.parent),
       metadata: message.event.metadata
     }
-    // Convert OP string to a valid int
-    result.op = Object.entries(ops).find(([op, value]) => {
-      return op === message.op
-    })[1]
   }
 
   if (message.peerTree) {
     result.peerTree = {
       parents: message.peerTree.parents.map(parent => bs58.decode(parent)),
-      children: message.peerTree.children.map(child => bs58.decode(child))
+      children: message.peerTree.children.map(child => bs58.decode(child)),
+      topic: bs58.decode(message.peerTree.topic)
     }
   }
+
+  // Convert OP string to a valid int
+  result.op = Object.entries(ops).find(([op, value]) => {
+    return op === message.op
+  })[1]
+
   return result
 }
 

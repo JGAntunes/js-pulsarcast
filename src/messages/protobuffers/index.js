@@ -2,10 +2,6 @@
 
 const protons = require('protons')
 
-const rpc = protons(require('./rpc.proto'))
-const topic = protons(require('./topic.proto'))
+const messages = protons(require('./messages.proto'))
 
-module.exports = {
-  rpc,
-  topic
-}
+module.exports = messages
