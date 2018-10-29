@@ -1,9 +1,9 @@
 'use strict'
 
 const Joi = require('joi-browser')
-const topicDescriptor = require('topic-descriptor')
-const eventDescriptor = require('event-descriptor')
-const peerTree = require('peer-tree')
+const topicDescriptor = require('./topic-descriptor')
+const eventDescriptor = require('./event-descriptor')
+const peerTree = require('./peer-tree')
 const ops = require('../protobuffers').RPC.Operation
 
 const metadata = Joi.object.keys({

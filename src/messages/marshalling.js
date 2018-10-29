@@ -1,8 +1,18 @@
 'use strict'
 
 const bs58 = require('bs58')
+const CID = require('cids')
 
 const ops = require('./protobuffers').RPC.Operation
+
+function linkMarshalling (link) {
+  return link['/'] ? {'/': link['/'].buffer} : {}
+}
+
+function linkUnmarshalling (link) {
+  // TODO error handling
+  return link['/'] ? {'/': new CID(link['/'])} : {}
+}
 
 function unmarshall (message) {
   // TODO improve code unmarshalling
@@ -10,23 +20,24 @@ function unmarshall (message) {
   result.metadata = message.metadata
 
   if (message.topicId) {
-    result.topicId = bs58.encode(message.topicId)
+    // TODO error handling
+    result.topicId = new CID(message.topicId)
   }
 
   if (message.topic) {
     result.topic = {
-      author: bs58.encode(message.topic.author),
-      parent: bs58.encode(message.topic.parent),
+      author: linkUnmarshalling(message.topic.author),
+      parent: linkUnmarshalling(message.topic.parent),
       ...message.topic
     }
   }
 
   if (message.event) {
     result.event = {
-      topic: bs58.encode(message.event.topic),
+      topic: linkUnmarshalling(message.event.topic),
       publisher: bs58.encode(message.event.publisher),
       payload: JSON.stringify(message.event.payload.toString('utf8')),
-      parent: bs58.encode(message.event.parent),
+      parent: linkUnmarshalling(message.event.parent),
       ...message.event
     }
   }
@@ -35,7 +46,7 @@ function unmarshall (message) {
     result.peerTree = {
       parents: message.peerTree.parents.map(parent => bs58.encode(parent)),
       children: message.peerTree.children.map(child => bs58.encode(child)),
-      topic: bs58.encode(message.peerTree.topic)
+      topic: new CID(message.peerTree.topic)
     }
   }
 
@@ -53,22 +64,23 @@ function marshall (message) {
   result.metadata = message.metadata
 
   if (message.topicId) {
-    result.topicId = bs58.decode(message.topicId)
+    result.topicId = message.topicId.buffer
   }
 
   if (message.topic) {
     result.topic = {
-      author: bs58.decode(message.topic.author),
-      parent: bs58.decode(message.topic.parent),
+      author: linkMarshalling(message.topic.author),
+      parent: linkMarshalling(message.topic.parent),
       ...message.topic
     }
   }
 
   if (message.event) {
     result.event = {
+      topic: linkMarshalling(message.event.topic),
       publisher: bs58.decode(message.event.publisher),
       payload: Buffer.from(JSON.stringify(message.event.payload), 'utf8'),
-      parent: bs58.decode(message.event.parent),
+      parent: linkMarshalling(message.event.parent),
       metadata: message.event.metadata
     }
   }
@@ -77,7 +89,7 @@ function marshall (message) {
     result.peerTree = {
       parents: message.peerTree.parents.map(parent => bs58.decode(parent)),
       children: message.peerTree.children.map(child => bs58.decode(child)),
-      topic: bs58.decode(message.peerTree.topic)
+      topic: message.peerTree.topic.buffer
     }
   }
 

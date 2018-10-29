@@ -1,5 +1,7 @@
 'use strict'
 
+const CID = require('cids')
+
 const config = require('../config')
 const ops = require('./protobuffers').RPC.Operation
 
@@ -9,6 +11,10 @@ function createMetadata () {
     protocolVersion: config.protocol,
     created: now.toISOString()
   }
+}
+
+function createLink (bs58Hash) {
+  return bs58Hash ? {'/': new CID(bs58Hash)} : {}
 }
 
 // Update RPC message will handle neighbourhood
@@ -31,9 +37,9 @@ function event (topic, {publisher, parent, payload, metadata = createMetadata()}
     op: ops.EVENT,
     metadata,
     event: {
-      topic,
+      topic: createLink(topic),
       publisher,
-      parent,
+      parent: createLink(parent),
       payload,
       metadata
     }
@@ -43,7 +49,7 @@ function event (topic, {publisher, parent, payload, metadata = createMetadata()}
 function joinTopic (topic) {
   return {
     op: ops.JOIN_TOPIC,
-    topicId: topic,
+    topicId: new CID(topic),
     metadata: createMetadata()
   }
 }
@@ -51,7 +57,7 @@ function joinTopic (topic) {
 function leaveTopic (topic) {
   return {
     op: ops.LEAVE_TOPIC,
-    topicId: topic,
+    topicId: new CID(topic),
     metadata: createMetadata()
   }
 }
@@ -62,7 +68,7 @@ function newTopic (name, {author, parent, metadata = createMetadata()}) {
     topic: {
       name,
       author,
-      parent,
+      parent: createLink(parent),
       '#': {},
       metadata
     },
