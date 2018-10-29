@@ -10,8 +10,12 @@ const metadata = Joi.object.keys({
 const topicDescriptor = Joi.object().keys({
   name: Joi.string().required(),
   author: Joi.binary().required(),
-  parent: Joi.binary().required(),
-  '#': Joi.object().required(),
+  parent: Joi.object().keys({
+    '/': Joi.binary()
+  }).required(),
+  '#': Joi.object().pattern(Joi.string(), Joi.object().keys({
+    '/': Joi.binary().required()
+  })).required(),
   metadata
 })
 

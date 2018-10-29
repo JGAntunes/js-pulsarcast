@@ -4,12 +4,16 @@ module.exports = `
 
 package pulsarcast;
 
+message Link {
+  optional bytes '/' = 1;
+}
+
 message TopicDescriptor {
 
   optional string name = 1;
   optional bytes author = 2;
-  optional bytes parent = 2;
-  map<string, bytes> # = 3;
+  optional Link parent = 2;
+  map<string, Link> # = 3;
   optional MetaData metadata = 4;
 
   message MetaData {
@@ -26,9 +30,9 @@ message EventDescriptor {
   }
 
   optional bytes publisher = 1;
-  optional bytes topic = 2;
+  optional Link topic = 2;
   optional bytes payload = 3;
-  optional bytes parent = 4;
+  optional Link parent = 4;
   optional MetaData metadata = 5;
 }
 
@@ -50,7 +54,7 @@ message RPC {
 
   message Message {
     optional Operation op = 1;
-    optional oneof payload {
+    oneof payload {
       TopicDescriptor topic = 2;
       EventDescriptor event = 3;
       PeerTree peerTree = 4;
