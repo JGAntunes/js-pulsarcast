@@ -11,8 +11,10 @@ function createRPCHandlers (pulsarcastNode) {
   return {
     event,
     update,
-    join,
-    leave,
+    topic: {
+      join,
+      leave
+    },
     genericHandler
   }
 
@@ -23,12 +25,13 @@ function createRPCHandlers (pulsarcastNode) {
     if (!message.event) return
 
     const {subscriptions} = pulsarcastNode
+    const topicCID = message.event.topic['/'].toBaseEncodedString()
     // We're subscribed to this topic, emit the message
-    if (subscriptions.has(message.event.topic)) {
-      pulsarcastNode.emit(message.event.topic, message.event)
+    if (subscriptions.has(topicCID)) {
+      pulsarcastNode.emit(topicCID, message.event)
     }
 
-    pulsarcastNode.rpc.send.event(message.event.topic, message.event, idB58Str)
+    pulsarcastNode.rpc.send.event(topicCID, message.event, idB58Str)
   }
 
   function update (idB58Str, message) {
@@ -36,28 +39,31 @@ function createRPCHandlers (pulsarcastNode) {
 
     // Only consider the message if we have data
     if (!message.peerTree) return
+    const topicCID = message.peerTree.topicId.toBaseEncodedString()
 
     const {peers} = pulsarcastNode
-    peers.get(idB58Str).updateTree(message.peerTree.topic, message.peerTree)
+    peers.get(idB58Str).updateTree(topicCID, message.peerTree)
   }
 
   function join (idB58Str, message) {
     log.trace(`Got join from  ${idB58Str}`)
 
     const {me, peers} = pulsarcastNode
+    const topicCID = message.topicId.toBaseEncodedString()
+
     // The peer should already be in the list given that
     // we received a message from it
     const child = peers.get(idB58Str)
     // TODO get the actual topic from the DHT
-    me.addChildren(message.topicId, [child])
+    me.addChildren(topicCID, [child])
     // Check if you have a set of parents for this topic
-    if (me.tree.get(message.topicId).parents > 0) {
+    if (me.tree.get(topicCID).parents > 0) {
       // Peer already connected
       // TODO take care of delivering initial state
       return
     }
 
-    pulsarcastNode.rpc.send.join(message.topicId)
+    pulsarcastNode.rpc.send.join(topicCID)
   }
 
   function leave (idB58Str, message) {

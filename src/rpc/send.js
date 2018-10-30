@@ -1,5 +1,7 @@
 'use strict'
 
+const dagCBOR = require('ipld-dag-cbor')
+
 const { createRPC, marshalling } = require('../messages')
 const log = require('../utils/logger')
 const { protobuffers } = require('./messages')
@@ -23,9 +25,15 @@ function createRPCHandlers (pulsarcastNode) {
     // RPC message is being created at this node, not just forwardind,
     // so add it on IPLD and propagate it through our whole topic tree
     if (!fromIdB58Str) {
-      pulsarcastNode.ipld.put(rpc.event, {format: 'dag-cbor'}, (err, cid) => {
+      dagCBOR.util.cid(rpc.event, (err, cid) => {
         console.log(cid)
-        // TODO handle errors
+        // TODO handle error, callback and all of this
+        dagCBOR.util.serialize(rpc.event, (err, serialized) => {
+          // TODO handle error
+          dht.put(cid.buffer, serialized, (err) => {
+            // TODO handle error
+          })
+        })
       })
 
       parents.forEach(parent => send(parent.info.id.toB58Str(), rpc))
@@ -48,6 +56,7 @@ function createRPCHandlers (pulsarcastNode) {
   // Join finds the closest peer to the topic CID
   // and sends the rpc join message
   function joinTopic (topic) {
+    // TODO get the actual topic descriptor
     const rpc = createRPC.topic.join(topic)
 
     // Get the closest peer stored locally
@@ -59,13 +68,19 @@ function createRPCHandlers (pulsarcastNode) {
     // TODO
   }
 
-  // TODO for now only put topic descriptor in IPLD
+  // TODO for now only put topic descriptor
   function newTopic (name, options) {
     const rpc = createRPC.topic.new(name, options)
 
-    pulsarcastNode.ipld.put(rpc.topic, {format: 'dag-cbor'}, (err, cid) => {
+    dagCBOR.util.cid(rpc.topic, (err, cid) => {
       console.log(cid)
-      // TODO handle errors
+      // TODO handle error, callback hell and all of this
+      dagCBOR.util.serialize(rpc.topic, (err, serialized) => {
+        // TODO handle error
+        dht.put(cid.buffer, serialized, (err) => {
+          // TODO handle error
+        })
+      })
     })
   }
 
