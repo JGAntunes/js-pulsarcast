@@ -2,7 +2,7 @@
 
 const Joi = require('joi-browser')
 
-const metadata = Joi.object.keys({
+const metadata = Joi.object().keys({
   created: Joi.date().iso().required(),
   protocolVersion: Joi.string().required()
 }).required()

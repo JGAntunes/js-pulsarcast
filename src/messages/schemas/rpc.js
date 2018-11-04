@@ -6,7 +6,7 @@ const eventDescriptor = require('./event-descriptor')
 const peerTree = require('./peer-tree')
 const ops = require('../protobuffers').RPC.Operation
 
-const metadata = Joi.object.keys({
+const metadata = Joi.object().keys({
   created: Joi.date().iso(),
   protocolVersion: Joi.string()
 }).required()

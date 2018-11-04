@@ -5,7 +5,7 @@ const assert = require('assert')
 const lp = require('pull-length-prefixed')
 const pull = require('pull-stream')
 
-const log = require('utils/logger')
+const log = require('./utils/logger')
 
 const { protobuffers } = require('./messages')
 const { protocol } = require('./config')
@@ -97,12 +97,14 @@ class Pulsarcast extends EventEmitter {
   }
 
   start (callback) {
+    log('Starting PulsarCast')
     if (this.started) {
       return setImmediate(() => callback(new Error('already started')))
     }
 
     this.libp2p.handle(protocol, this._onConnection)
     this.started = true
+    setImmediate(() => callback())
   }
 
   stop (callback) {
@@ -110,14 +112,19 @@ class Pulsarcast extends EventEmitter {
       return setImmediate(() => callback(new Error('not started yet')))
     }
     // TODO
+    setImmediate(() => callback())
   }
 
   publish (topic, message) {
     assert(this.started, 'Pulsarcast is not started')
 
+    const payload = Buffer.isBuffer(message)
+      ? message
+      : Buffer.from(message, 'utf8')
+
     const event = {
       publisher: this.me.info.id.toB58Str(),
-      payload: Buffer.from(message, 'utf8'),
+      payload,
       parent: null
     }
 

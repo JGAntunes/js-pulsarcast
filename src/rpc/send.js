@@ -4,7 +4,7 @@ const dagCBOR = require('ipld-dag-cbor')
 
 const { createRPC, marshalling } = require('../messages')
 const log = require('../utils/logger')
-const { protobuffers } = require('./messages')
+const { protobuffers } = require('../messages')
 const RPC = protobuffers.RPC
 
 function createRPCHandlers (pulsarcastNode) {
