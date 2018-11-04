@@ -6,10 +6,11 @@ const pull = require('pull-stream')
 const EventEmitter = require('events')
 const assert = require('assert')
 
-// const log = require('utils/logger')
+  const log = require('./utils/logger')
 
 class Peer extends EventEmitter {
   constructor (peerInfo, conn = null) {
+    log(`New peer ${peerInfo.id.toB58String()} registered`)
     assert(peerInfo, 'Need a peerInfo object to initiate the peer')
     super()
 

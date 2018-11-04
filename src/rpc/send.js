@@ -8,7 +8,7 @@ const { protobuffers } = require('../messages')
 const RPC = protobuffers.RPC
 
 function createRPCHandlers (pulsarcastNode) {
-  const dht = pulsarcastNode.libp2p.dht
+  const dht = pulsarcastNode.libp2p._dht
 
   return {
     event,
@@ -20,7 +20,10 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   function event (topic, event, fromIdB58Str) {
-    const { parents, children } = pulsarcastNode.me.trees.get(topic)
+    const neighbours = pulsarcastNode.me.trees.get(topic)
+    // TODO handle publishing to an event we're not subscribed to
+    if (!neighbours) return
+    const { parents, children } = neighbours
     const rpc = createRPC.event(topic, event)
     // RPC message is being created at this node, not just forwardind,
     // so add it on IPLD and propagate it through our whole topic tree
@@ -36,20 +39,20 @@ function createRPCHandlers (pulsarcastNode) {
         })
       })
 
-      parents.forEach(parent => send(parent.info.id.toB58Str(), rpc))
-      children.forEach(child => send(child.info.id.toB58Str(), rpc))
+      parents.forEach(parent => send(parent.info.id.toB58String(), rpc))
+      children.forEach(child => send(child.info.id.toB58String(), rpc))
       return
     }
 
     // Need to check where to forward the message
     if (parents.find(peer => peer.info.id.toB58String() === fromIdB58Str)) {
       // Need to forward the message to our children
-      parents.forEach(parent => send(parent.info.id.toB58Str(), rpc))
+      parents.forEach(parent => send(parent.info.id.toB58String(), rpc))
     }
 
     if (children.find(peer => peer.info.id.toB58String() === fromIdB58Str)) {
       // Need to forward the message to our parents
-      children.forEach(child => send(child.info.id.toB58Str(), rpc))
+      children.forEach(child => send(child.info.id.toB58String(), rpc))
     }
   }
 
@@ -60,8 +63,10 @@ function createRPCHandlers (pulsarcastNode) {
     const rpc = createRPC.topic.join(topic)
 
     // Get the closest peer stored locally
-    const closestPeerId = dht.routingTable.closestPeer(topic, 1)
-    send(closestPeerId.toB58Str(), rpc)
+    const closestPeerId = dht.routingTable.closestPeer(rpc.topicId.buffer, 1)
+    // TODO handle non-existent closestPeer
+    if (!closestPeerId) return
+    send(closestPeerId.toB58String(), rpc)
   }
 
   function leaveTopic (topic) {

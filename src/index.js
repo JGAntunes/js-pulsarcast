@@ -123,7 +123,7 @@ class Pulsarcast extends EventEmitter {
       : Buffer.from(message, 'utf8')
 
     const event = {
-      publisher: this.me.info.id.toB58Str(),
+      publisher: this.me.info.id.toB58String(),
       payload,
       parent: null
     }
@@ -146,7 +146,7 @@ class Pulsarcast extends EventEmitter {
     assert(this.started, 'Pulsarcast is not started')
 
     const options = {
-      author: this.me.info.id.toB58Str(),
+      author: this.me.info.id.toB58String(),
       parent,
       '#': {}
     }
