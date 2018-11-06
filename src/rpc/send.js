@@ -78,11 +78,13 @@ function createRPCHandlers (pulsarcastNode) {
     const rpc = createRPC.topic.new(name, options)
 
     dagCBOR.util.cid(rpc.topic, (err, cid) => {
-      console.log(cid)
+      log.trace(`Created new topic with id ${cid.toBaseEncodedString()}`)
       // TODO handle error, callback hell and all of this
       dagCBOR.util.serialize(rpc.topic, (err, serialized) => {
+        log.trace(`Topic ${cid.toBaseEncodedString()} serialized`)
         // TODO handle error
         dht.put(cid.buffer, serialized, (err) => {
+          log.trace(`Topic ${cid.toBaseEncodedString()} stored in DHT`)
           // TODO handle error
         })
       })

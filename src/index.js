@@ -118,6 +118,8 @@ class Pulsarcast extends EventEmitter {
   publish (topic, message) {
     assert(this.started, 'Pulsarcast is not started')
 
+    log(`Publishing message on topic ${topic}`)
+
     const payload = Buffer.isBuffer(message)
       ? message
       : Buffer.from(message, 'utf8')
@@ -134,6 +136,10 @@ class Pulsarcast extends EventEmitter {
   subscribe (topic) {
     assert(this.started, 'Pulsarcast is not started')
 
+    log(`Subscribing to topic ${topic}`)
+
+    this.subscriptions.add(topic)
+
     this.rpc.send.topic.join(topic)
   }
 
@@ -144,6 +150,8 @@ class Pulsarcast extends EventEmitter {
 
   createTopic (topicName, { parent = null } = {}) {
     assert(this.started, 'Pulsarcast is not started')
+
+    log(`Creating topic ${topicName}`)
 
     const options = {
       author: this.me.info.id.toB58String(),
