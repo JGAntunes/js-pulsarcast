@@ -2,9 +2,9 @@
 
 const dagCBOR = require('ipld-dag-cbor')
 
-const { createRPC, marshalling } = require('../messages')
+const { createRPC, marshalling, protobuffers } = require('../messages')
 const log = require('../utils/logger')
-const { protobuffers } = require('../messages')
+
 const RPC = protobuffers.RPC
 
 function createRPCHandlers (pulsarcastNode) {
@@ -39,20 +39,20 @@ function createRPCHandlers (pulsarcastNode) {
         })
       })
 
-      parents.forEach(parent => send(parent.info.id.toB58String(), rpc))
-      children.forEach(child => send(child.info.id.toB58String(), rpc))
+      parents.forEach(parent => send(parent.info.id, rpc))
+      children.forEach(child => send(child.info.id, rpc))
       return
     }
 
     // Need to check where to forward the message
     if (parents.find(peer => peer.info.id.toB58String() === fromIdB58Str)) {
       // Need to forward the message to our children
-      parents.forEach(parent => send(parent.info.id.toB58String(), rpc))
+      parents.forEach(parent => send(parent.info.id, rpc))
     }
 
     if (children.find(peer => peer.info.id.toB58String() === fromIdB58Str)) {
       // Need to forward the message to our parents
-      children.forEach(child => send(child.info.id.toB58String(), rpc))
+      children.forEach(child => send(child.info.id, rpc))
     }
   }
 
@@ -66,7 +66,7 @@ function createRPCHandlers (pulsarcastNode) {
     const closestPeerId = dht.routingTable.closestPeer(rpc.topicId.buffer, 1)
     // TODO handle non-existent closestPeer
     if (!closestPeerId) return
-    send(closestPeerId.toB58String(), rpc)
+    send(closestPeerId, rpc)
   }
 
   function leaveTopic (topic) {
@@ -91,13 +91,18 @@ function createRPCHandlers (pulsarcastNode) {
     })
   }
 
-  function send (idB58Str, rpc) {
-    log.trace(`Sending event to ${idB58Str}`)
+  function send (peerId, rpc) {
+    log.trace(`Sending ${rpc.op} to ${peerId.toB58String()}`)
 
-    const rpcToSend = marshalling.marshall(rpc)
-    const peer = pulsarcastNode.peers.get(idB58Str)
-    const encodedMessage = RPC.encode([rpcToSend])
-    peer.sendMessages(encodedMessage)
+    pulsarcastNode._getPeer(peerId, (err, peer) => {
+      // TODO proper error handling
+      if (err) throw err
+
+      const rpcToSend = marshalling.marshall(rpc)
+      const encodedMessage = RPC.encode({msgs: [rpcToSend]})
+
+      peer.sendMessages(encodedMessage)
+    })
   }
 }
 

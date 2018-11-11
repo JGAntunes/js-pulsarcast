@@ -6,7 +6,7 @@ const pull = require('pull-stream')
 const EventEmitter = require('events')
 const assert = require('assert')
 
-  const log = require('./utils/logger')
+const log = require('./utils/logger')
 
 class Peer extends EventEmitter {
   constructor (peerInfo, conn = null) {
@@ -38,16 +38,20 @@ class Peer extends EventEmitter {
     pull(
       this.stream,
       lp.encode(),
-      conn,
-      pull.onEnd(() => {
-        this.conn = null
-        this.stream = null
-        this.emit('close')
-      })
+      conn
+      // pull.onEnd((...args) => {
+      //   log.trace(`closing peer conn ${args}`)
+      //   this.conn = null
+      //   this.stream = null
+      //   this.emit('close')
+      // })
     )
+
+    this.emit('connection')
   }
 
   sendMessages (messages) {
+    log.trace('Pushing message')
     this.stream.push(messages)
   }
 
@@ -84,6 +88,20 @@ class Peer extends EventEmitter {
       if (!exists) {
         tree.parents.push(parent)
       }
+    })
+  }
+
+  close (callback) {
+    // End the pushable
+    if (this.stream) {
+      this.stream.end()
+    }
+
+    setImmediate(() => {
+      this.conn = null
+      this.stream = null
+      this.emit('close')
+      callback()
     })
   }
 }

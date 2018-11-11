@@ -3,7 +3,6 @@
 const CID = require('cids')
 
 const config = require('../config')
-const ops = require('./protobuffers').RPC.Operation
 
 function createMetadata () {
   const now = new Date()
@@ -22,7 +21,7 @@ function createLink (bs58Hash) {
 function update (topic, {parents, children}) {
   const metadata = createMetadata()
   return {
-    op: ops.UPDATE,
+    op: 'UPDATE',
     metadata,
     peerTree: {
       topic,
@@ -34,7 +33,7 @@ function update (topic, {parents, children}) {
 
 function event (topic, {publisher, parent, payload, metadata = createMetadata()}) {
   return {
-    op: ops.EVENT,
+    op: 'EVENT',
     metadata,
     event: {
       topic: createLink(topic),
@@ -48,7 +47,7 @@ function event (topic, {publisher, parent, payload, metadata = createMetadata()}
 
 function joinTopic (topic) {
   return {
-    op: ops.JOIN_TOPIC,
+    op: 'JOIN_TOPIC',
     topicId: new CID(topic),
     metadata: createMetadata()
   }
@@ -56,7 +55,7 @@ function joinTopic (topic) {
 
 function leaveTopic (topic) {
   return {
-    op: ops.LEAVE_TOPIC,
+    op: 'LEAVE_TOPIC',
     topicId: new CID(topic),
     metadata: createMetadata()
   }
@@ -64,7 +63,7 @@ function leaveTopic (topic) {
 
 function newTopic (name, {author, parent, metadata = createMetadata()}) {
   return {
-    op: ops.NEW_TOPIC,
+    op: 'NEW_TOPIC',
     topic: {
       name,
       author,

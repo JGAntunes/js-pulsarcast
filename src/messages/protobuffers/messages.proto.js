@@ -60,7 +60,7 @@ message RPC {
       PeerTree peerTree = 4;
       bytes topicId = 5;
     }
-    optional MessageMetaData metadata = 5;
+    optional MessageMetaData metadata = 6;
   }
 
   message MessageMetaData {
