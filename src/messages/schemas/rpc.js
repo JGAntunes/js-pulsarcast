@@ -1,6 +1,6 @@
 'use strict'
 
-const Joi = require('joi-browser')
+const Joi = require('joi')
 const topicDescriptor = require('./topic-descriptor')
 const eventDescriptor = require('./event-descriptor')
 const peerTree = require('./peer-tree')

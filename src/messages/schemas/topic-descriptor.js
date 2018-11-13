@@ -1,6 +1,6 @@
 'use strict'
 
-const Joi = require('joi-browser')
+const Joi = require('joi')
 
 const metadata = Joi.object().keys({
   created: Joi.date().iso().required(),

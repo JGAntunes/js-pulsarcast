@@ -19,14 +19,17 @@ function createRPCHandlers (pulsarcastNode) {
     }
   }
 
-  function event (topic, event, fromIdB58Str) {
-    const neighbours = pulsarcastNode.me.trees.get(topic)
+  function event (topicB58Str, event, fromIdB58Str) {
+    const neighbours = pulsarcastNode.me.trees.get(topicB58Str)
     // TODO handle publishing to an event we're not subscribed to
+    // TODO get topic
     if (!neighbours) return
     const { parents, children } = neighbours
-    const rpc = createRPC.event(topic, event)
+    const rpc = createRPC.event(topicB58Str, event)
+    log.debug(rpc)
+    log.debug(rpc.event.topic['/'])
     // RPC message is being created at this node, not just forwardind,
-    // so add it on IPLD and propagate it through our whole topic tree
+    // so add it to DHT and propagate it through our whole topic tree
     if (!fromIdB58Str) {
       dagCBOR.util.cid(rpc.event, (err, cid) => {
         console.log(cid)
@@ -39,20 +42,20 @@ function createRPCHandlers (pulsarcastNode) {
         })
       })
 
-      parents.forEach(parent => send(parent.info.id, rpc))
-      children.forEach(child => send(child.info.id, rpc))
+      parents.forEach(parent => send(parent, rpc))
+      children.forEach(child => send(child, rpc))
       return
     }
 
     // Need to check where to forward the message
     if (parents.find(peer => peer.info.id.toB58String() === fromIdB58Str)) {
       // Need to forward the message to our children
-      parents.forEach(parent => send(parent.info.id, rpc))
+      children.forEach(children => send(children, rpc))
     }
 
     if (children.find(peer => peer.info.id.toB58String() === fromIdB58Str)) {
       // Need to forward the message to our parents
-      children.forEach(child => send(child.info.id, rpc))
+      parents.forEach(parent => send(parent, rpc))
     }
   }
 
@@ -64,9 +67,18 @@ function createRPCHandlers (pulsarcastNode) {
 
     // Get the closest peer stored locally
     const closestPeerId = dht.routingTable.closestPeer(rpc.topicId.buffer, 1)
+
     // TODO handle non-existent closestPeer
     if (!closestPeerId) return
-    send(closestPeerId, rpc)
+
+    pulsarcastNode._getPeer(closestPeerId, (err, peer) => {
+      // TODO proper error handling
+      if (err) throw err
+      // Add peer to my tree
+      pulsarcastNode.me.addParents(rpc.topicId.toBaseEncodedString(), [peer])
+
+      send(peer, rpc)
+    })
   }
 
   function leaveTopic (topic) {
@@ -91,18 +103,13 @@ function createRPCHandlers (pulsarcastNode) {
     })
   }
 
-  function send (peerId, rpc) {
-    log.trace(`Sending ${rpc.op} to ${peerId.toB58String()}`)
+  function send (peer, rpc) {
+    log.trace(`Sending ${rpc.op} to ${peer.info.id.toB58String()}`)
 
-    pulsarcastNode._getPeer(peerId, (err, peer) => {
-      // TODO proper error handling
-      if (err) throw err
+    const rpcToSend = marshalling.marshall(rpc)
+    const encodedMessage = RPC.encode({msgs: [rpcToSend]})
 
-      const rpcToSend = marshalling.marshall(rpc)
-      const encodedMessage = RPC.encode({msgs: [rpcToSend]})
-
-      peer.sendMessages(encodedMessage)
-    })
+    peer.sendMessages(encodedMessage)
   }
 }
 

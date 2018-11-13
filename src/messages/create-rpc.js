@@ -13,7 +13,10 @@ function createMetadata () {
 }
 
 function createLink (bs58Hash) {
-  return bs58Hash ? {'/': new CID(bs58Hash)} : {}
+  // No link
+  // TODO NEXT
+  if (!bs58Hash || bs58Hash === {}) return {}
+  return {'/': new CID(bs58Hash)}
 }
 
 // Update RPC message will handle neighbourhood

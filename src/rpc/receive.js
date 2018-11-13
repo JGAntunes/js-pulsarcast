@@ -1,6 +1,7 @@
 'use strict'
 
-const Joi = require('joi-browser')
+const Joi = require('joi')
+const dagCBOR = require('ipld-dag-cbor')
 
 const log = require('../utils/logger')
 const { protobuffers, schemas, marshalling } = require('../messages')
@@ -8,6 +9,8 @@ const { protobuffers, schemas, marshalling } = require('../messages')
 const ops = protobuffers.RPC.Operation
 
 function createRPCHandlers (pulsarcastNode) {
+  const dht = pulsarcastNode.libp2p._dht
+
   return {
     event,
     update,
@@ -54,16 +57,38 @@ function createRPCHandlers (pulsarcastNode) {
     // The peer should already be in the list given that
     // we received a message from it
     const child = peers.get(idB58Str)
-    // TODO get the actual topic from the DHT
-    me.addChildren(topicCID, [child])
-    // Check if you have a set of parents for this topic
-    if (me.tree.get(topicCID).parents > 0) {
-      // Peer already connected
-      // TODO take care of delivering initial state
-      return
-    }
 
-    pulsarcastNode.rpc.send.join(topicCID)
+    log.debug('Message %O', message)
+    // Get the topic descriptor from the DHT
+    dht.get(message.topicId.buffer, null, (err, value) => {
+      // TODO handle error
+      if (err) {
+        log.error(err)
+        throw err
+      }
+      dagCBOR.util.deserialize(value, (err, node) => {
+        // TODO handle error
+        if (err) {
+          log.error(err)
+          throw err
+        }
+        log.debug(node)
+        // TODO NEXT check if author is this node, else bubble up requests
+        me.addChildren(topicCID, [child])
+
+        // This node is the root node for the topic
+        if (me.info.id.toB58String() === node.author) return
+
+        // Check if you have a set of parents for this topic
+        if (me.trees.get(topicCID).parents > 0) {
+          // Peer already connected
+          // TODO take care of delivering initial state
+          return
+        }
+
+        pulsarcastNode.rpc.send.join(topicCID)
+      })
+    })
   }
 
   function leave (idB58Str, message) {
@@ -72,6 +97,7 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   function genericHandler (idB58Str, message) {
+    log.debug('%O', message)
     const result = Joi.validate(message, schemas.rpc, {
       abortEarly: true,
       allowUnknown: false,
@@ -84,9 +110,10 @@ function createRPCHandlers (pulsarcastNode) {
     }
     // We use the resulting message from the validation
     // with type coercion
-    const jsonMessage = marshalling.unmarshall(result.message)
+    const jsonMessage = marshalling.unmarshall(result.value)
 
-    switch (jsonMessage.op) {
+    log.debug('JSON message %O', jsonMessage)
+    switch (ops[jsonMessage.op]) {
       // case ops.PING:
       //   return ping(idB58Str, jsonMessage)
       case ops.UPDATE:

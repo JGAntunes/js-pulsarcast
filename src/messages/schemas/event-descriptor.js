@@ -1,6 +1,6 @@
 'use strict'
 
-const Joi = require('joi-browser')
+const Joi = require('joi')
 
 const metadata = Joi.object().keys({
   created: Joi.date().iso(),
@@ -10,7 +10,7 @@ const metadata = Joi.object().keys({
 const eventDescriptor = Joi.object().keys({
   publisher: Joi.binary().required(),
   parent: Joi.object().keys({
-    '/': Joi.binary()
+    '/': Joi.binary().allow(null)
   }).required(),
   payload: Joi.binary().required(),
   topic: Joi.object().keys({

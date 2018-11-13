@@ -3,6 +3,7 @@
 const bs58 = require('bs58')
 const CID = require('cids')
 
+const log = require('../utils/logger')
 const ops = require('./protobuffers').RPC.Operation
 
 function linkMarshalling (link) {
@@ -26,19 +27,19 @@ function unmarshall (message) {
 
   if (message.topic) {
     result.topic = {
+      ...message.topic,
       author: linkUnmarshalling(message.topic.author),
-      parent: linkUnmarshalling(message.topic.parent),
-      ...message.topic
+      parent: linkUnmarshalling(message.topic.parent)
     }
   }
 
   if (message.event) {
     result.event = {
+      ...message.event,
       topic: linkUnmarshalling(message.event.topic),
       publisher: bs58.encode(message.event.publisher),
-      payload: JSON.stringify(message.event.payload.toString('utf8')),
-      parent: linkUnmarshalling(message.event.parent),
-      ...message.event
+      payload: message.event.payload.toString('utf8'),
+      parent: linkUnmarshalling(message.event.parent)
     }
   }
 
@@ -69,20 +70,22 @@ function marshall (message) {
 
   if (message.topic) {
     result.topic = {
+      ...message.topic,
       author: linkMarshalling(message.topic.author),
-      parent: linkMarshalling(message.topic.parent),
-      ...message.topic
+      parent: linkMarshalling(message.topic.parent)
     }
   }
 
   if (message.event) {
+    log.debug('EVENT %O', message.event)
     result.event = {
       topic: linkMarshalling(message.event.topic),
       publisher: bs58.decode(message.event.publisher),
-      payload: Buffer.from(JSON.stringify(message.event.payload), 'utf8'),
+      payload: Buffer.from(message.event.payload, 'utf8'),
       parent: linkMarshalling(message.event.parent),
       metadata: message.event.metadata
     }
+    log.debug('EVENT %O', result.event)
   }
 
   if (message.peerTree) {

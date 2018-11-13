@@ -32,6 +32,7 @@
     "cids": "^0.5.5",
     "debug": "^3.1.0",
     "ipld-dag-cbor": "^0.13.0",
+    "joi": "^13.4.0",
     "joi-browser": "^13.4.0",
     "peer-info": "^0.14.1",
     "protons": "^1.0.1",

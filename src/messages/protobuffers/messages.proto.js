@@ -5,7 +5,7 @@ module.exports = `
 package pulsarcast;
 
 message Link {
-  optional bytes '/' = 1;
+  optional bytes / = 1;
 }
 
 message TopicDescriptor {

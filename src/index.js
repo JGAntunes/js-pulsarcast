@@ -4,7 +4,6 @@ const EventEmitter = require('events')
 const assert = require('assert')
 const lp = require('pull-length-prefixed')
 const pull = require('pull-stream')
-const PeerInfo = require('peer-info')
 
 const log = require('./utils/logger')
 
@@ -14,7 +13,6 @@ const Peer = require('./peer')
 const CreateRpcHandlers = require('./rpc')
 
 class Pulsarcast extends EventEmitter {
-  // TODO for now we're receiving an instance of IPLD
   constructor (libp2p) {
     super()
 
@@ -38,11 +36,15 @@ class Pulsarcast extends EventEmitter {
     this.me = new Peer(libp2p.peerInfo)
 
     this._onConnection = this._onConnection.bind(this)
-    this.libp2p._switch.observer.on('message', (peerId, transport, ptcol, direction, bufferLength) => {
-      if (ptcol === protocol) {
-        log.trace({ peerId, transport, protocol, direction, bufferLength })
+
+    // Monitor pulsarcast messages for debug purposes
+    this.libp2p._switch.observer.on('message',
+      (peerId, transport, msgProtocol, direction, bufferLength) => {
+        if (msgProtocol === protocol) {
+          log.trace({ peerId, transport, protocol, direction, bufferLength })
+        }
       }
-    })
+    )
 
     // Create our handlers to receive and send RPC messages
     this.rpc = CreateRpcHandlers(this)
@@ -50,10 +52,14 @@ class Pulsarcast extends EventEmitter {
 
   _addPeer (peerInfo, conn) {
     const idB58Str = peerInfo.id.toB58String()
+    log.trace(`Adding peer ${idB58Str}`)
     // Check to see if we already have the peer registered
     let peer = this.peers.get(idB58Str)
+    // We already have the peer listed, just attach to connection
     if (peer) {
       peer.attachConnection(conn)
+      // Attach peer conn to our rpc handlers
+      this._listenToPeerConn(idB58Str, conn, peer)
       return peer
     }
     // Create a new peer and insert it in the map
@@ -62,6 +68,8 @@ class Pulsarcast extends EventEmitter {
     peer.once('close', () => () => {
       this.peers.delete(idB58Str)
     })
+    // Attach peer conn to our rpc handlers
+    this._listenToPeerConn(idB58Str, conn, peer)
     // Insert peer in list
     this.peers.set(idB58Str, peer)
     return peer
@@ -77,17 +85,15 @@ class Pulsarcast extends EventEmitter {
     // Let's dial to it
     this.libp2p.dialProtocol(peerId, protocol, (err, conn) => {
       if (err) return callback(err)
-      log.trace(`Dialing peer ${conn}`)
+      log.trace(`Dialing peer ${idB58Str}`)
 
       const peerInfo = this.libp2p.peerBook.get(peerId)
       const peer = this._addPeer(peerInfo, conn)
-      this._processConnection(null, conn, peer)
       callback(null, peer)
     })
   }
 
   _onConnection (protocol, conn) {
-    console.trace('ON CONNECTION')
     conn.getPeerInfo((err, peerInfo) => {
       if (err) {
         log.err('Failed to identify incomming conn', err)
@@ -95,16 +101,12 @@ class Pulsarcast extends EventEmitter {
         return pull(pull.empty(), conn)
       }
 
-      log.trace('Incoming conn %O', peerInfo)
-      const idB58Str = peerInfo.id.toB58String()
-      const peer = this._addPeer(peerInfo, conn)
-
-      this._processConnection(idB58Str, conn, peer)
+      this._addPeer(peerInfo, conn)
     })
   }
 
-  _processConnection (idB58Str, conn, peer) {
-    log(`Processing connection ${idB58Str}`)
+  _listenToPeerConn (idB58Str, conn, peer) {
+    log(`Listening to peer connection ${idB58Str}`)
     pull(
       conn,
       lp.decode(),
@@ -125,8 +127,10 @@ class Pulsarcast extends EventEmitter {
   }
 
   _onConnectionEnd (idB58Str, peer, err) {
-    log(`Error from ${idB58Str}`, err)
-    // TODO clear connection and peer state
+    log.error(`Error from ${idB58Str}`, err)
+    peer.close(() => {
+      log.trace(`Successfully closed connection for peer ${idB58Str}`)
+    })
   }
 
   start (callback) {
@@ -146,7 +150,7 @@ class Pulsarcast extends EventEmitter {
     if (!this.started) {
       return setImmediate(() => callback(new Error('not started yet')))
     }
-    // TODO
+    // TODO clean up all peer conns
     setImmediate(() => callback())
   }
 

@@ -1,6 +1,6 @@
 'use strict'
 
-const Joi = require('joi-browser')
+const Joi = require('joi')
 
 const peerTree = Joi.object().keys({
   topic: Joi.binary().required(),
