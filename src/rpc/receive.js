@@ -2,6 +2,7 @@
 
 const Joi = require('joi')
 const dagCBOR = require('ipld-dag-cbor')
+const { waterfall } = require('async')
 
 const log = require('../utils/logger')
 const { protobuffers, schemas, marshalling } = require('../messages')
@@ -34,6 +35,8 @@ function createRPCHandlers (pulsarcastNode) {
       pulsarcastNode.emit(topicCID, message.event)
     }
 
+    log.debug('Got event %O', message)
+
     pulsarcastNode.rpc.send.event(topicCID, message.event, idB58Str)
   }
 
@@ -58,36 +61,25 @@ function createRPCHandlers (pulsarcastNode) {
     // we received a message from it
     const child = peers.get(idB58Str)
 
-    log.debug('Message %O', message)
     // Get the topic descriptor from the DHT
-    dht.get(message.topicId.buffer, null, (err, value) => {
+    waterfall([
+      dht.get.bind(dht, message.topicId.buffer, null),
+      dagCBOR.util.deserialize
+    ], (err, dagNode) => {
       // TODO handle error
       if (err) {
         log.error(err)
         throw err
       }
-      dagCBOR.util.deserialize(value, (err, node) => {
-        // TODO handle error
-        if (err) {
-          log.error(err)
-          throw err
-        }
-        log.debug(node)
-        // TODO NEXT check if author is this node, else bubble up requests
-        me.addChildren(topicCID, [child])
+      // Add this peer as a child to this topic tree
+      me.addChildren(topicCID, [child])
+      // TODO take care of delivering initial state
+      // This node is the root node for the topic
+      if (me.info.id.toB58String() === dagNode.author) return
+      // Check if we have a set of parents for this topic
+      if (me.trees.get(topicCID).parents > 0) return
 
-        // This node is the root node for the topic
-        if (me.info.id.toB58String() === node.author) return
-
-        // Check if you have a set of parents for this topic
-        if (me.trees.get(topicCID).parents > 0) {
-          // Peer already connected
-          // TODO take care of delivering initial state
-          return
-        }
-
-        pulsarcastNode.rpc.send.join(topicCID)
-      })
+      pulsarcastNode.rpc.send.join(topicCID)
     })
   }
 
@@ -97,7 +89,6 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   function genericHandler (idB58Str, message) {
-    log.debug('%O', message)
     const result = Joi.validate(message, schemas.rpc, {
       abortEarly: true,
       allowUnknown: false,
@@ -112,7 +103,6 @@ function createRPCHandlers (pulsarcastNode) {
     // with type coercion
     const jsonMessage = marshalling.unmarshall(result.value)
 
-    log.debug('JSON message %O', jsonMessage)
     switch (ops[jsonMessage.op]) {
       // case ops.PING:
       //   return ping(idB58Str, jsonMessage)

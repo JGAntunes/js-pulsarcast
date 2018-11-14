@@ -68,10 +68,10 @@ class Pulsarcast extends EventEmitter {
     peer.once('close', () => () => {
       this.peers.delete(idB58Str)
     })
-    // Attach peer conn to our rpc handlers
-    this._listenToPeerConn(idB58Str, conn, peer)
     // Insert peer in list
     this.peers.set(idB58Str, peer)
+    // Attach peer conn to our rpc handlers
+    this._listenToPeerConn(idB58Str, conn, peer)
     return peer
   }
 

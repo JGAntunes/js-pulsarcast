@@ -3,7 +3,6 @@
 const bs58 = require('bs58')
 const CID = require('cids')
 
-const log = require('../utils/logger')
 const ops = require('./protobuffers').RPC.Operation
 
 function linkMarshalling (link) {
@@ -77,7 +76,6 @@ function marshall (message) {
   }
 
   if (message.event) {
-    log.debug('EVENT %O', message.event)
     result.event = {
       topic: linkMarshalling(message.event.topic),
       publisher: bs58.decode(message.event.publisher),
@@ -85,7 +83,6 @@ function marshall (message) {
       parent: linkMarshalling(message.event.parent),
       metadata: message.event.metadata
     }
-    log.debug('EVENT %O', result.event)
   }
 
   if (message.peerTree) {

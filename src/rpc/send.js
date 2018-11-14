@@ -1,6 +1,7 @@
 'use strict'
 
 const dagCBOR = require('ipld-dag-cbor')
+const { parallel, waterfall } = require('async')
 
 const { createRPC, marshalling, protobuffers } = require('../messages')
 const log = require('../utils/logger')
@@ -20,26 +21,26 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   function event (topicB58Str, event, fromIdB58Str) {
-    const neighbours = pulsarcastNode.me.trees.get(topicB58Str)
+    const trees = pulsarcastNode.me.trees.get(topicB58Str)
     // TODO handle publishing to an event we're not subscribed to
     // TODO get topic
-    if (!neighbours) return
-    const { parents, children } = neighbours
+    if (!trees) return
+    const { parents, children } = trees
     const rpc = createRPC.event(topicB58Str, event)
-    log.debug(rpc)
-    log.debug(rpc.event.topic['/'])
     // RPC message is being created at this node, not just forwardind,
     // so add it to DHT and propagate it through our whole topic tree
     if (!fromIdB58Str) {
-      dagCBOR.util.cid(rpc.event, (err, cid) => {
-        console.log(cid)
-        // TODO handle error, callback and all of this
-        dagCBOR.util.serialize(rpc.event, (err, serialized) => {
-          // TODO handle error
-          dht.put(cid.buffer, serialized, (err) => {
-            // TODO handle error
-          })
-        })
+      waterfall([
+        (cb) => parallel([
+          dagCBOR.util.cid.bind(null, rpc.event),
+          dagCBOR.util.serialize.bind(null, rpc.event)
+        ], cb),
+        ([cid, serialized], cb) => dht.put(cid.buffer, serialized, cb)
+      ], (err) => {
+        // TODO handle error
+        if (err) {
+          log.error(err)
+        }
       })
 
       parents.forEach(parent => send(parent, rpc))
@@ -89,17 +90,21 @@ function createRPCHandlers (pulsarcastNode) {
   function newTopic (name, options) {
     const rpc = createRPC.topic.new(name, options)
 
-    dagCBOR.util.cid(rpc.topic, (err, cid) => {
-      log.trace(`Created new topic with id ${cid.toBaseEncodedString()}`)
-      // TODO handle error, callback hell and all of this
-      dagCBOR.util.serialize(rpc.topic, (err, serialized) => {
-        log.trace(`Topic ${cid.toBaseEncodedString()} serialized`)
-        // TODO handle error
-        dht.put(cid.buffer, serialized, (err) => {
-          log.trace(`Topic ${cid.toBaseEncodedString()} stored in DHT`)
-          // TODO handle error
-        })
-      })
+    waterfall([
+      (cb) => parallel([
+        dagCBOR.util.cid.bind(null, rpc.topic),
+        dagCBOR.util.serialize.bind(null, rpc.topic)
+      ], cb),
+      ([cid, serialized], cb) => {
+        log.trace(`Topic ${name} cid is ${cid.toBaseEncodedString()}`)
+        dht.put(cid.buffer, serialized, cb)
+      }
+    ], (err) => {
+      // TODO proper error handling
+      if (err) {
+        log.error(err)
+      }
+      log.trace(`Topic ${name} stored in DHT`)
     })
   }
 

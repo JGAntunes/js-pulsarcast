@@ -4,6 +4,7 @@ const CID = require('cids')
 
 const config = require('../config')
 
+
 function createMetadata () {
   const now = new Date()
   return {
@@ -12,11 +13,14 @@ function createMetadata () {
   }
 }
 
-function createLink (bs58Hash) {
+function createLink (link) {
   // No link
-  // TODO NEXT
-  if (!bs58Hash || bs58Hash === {}) return {}
-  return {'/': new CID(bs58Hash)}
+  if (!link) return {}
+  // It's an object but empty
+  if (!link['/'] && typeof link === 'object') return {}
+  // It can be a link already or just the multihash
+  const newCID = link['/'] || link
+  return {'/': new CID(newCID)}
 }
 
 // Update RPC message will handle neighbourhood
