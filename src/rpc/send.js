@@ -63,21 +63,26 @@ function createRPCHandlers (pulsarcastNode) {
   // Join finds the closest peer to the topic CID
   // and sends the rpc join message
   function joinTopic (topic) {
-    // TODO get the actual topic descriptor
     const rpc = createRPC.topic.join(topic)
 
-    // Get the closest peer stored locally
-    const closestPeerId = dht.routingTable.closestPeer(rpc.topicId.buffer, 1)
+    waterfall([
+      // Get the actual topic descriptor
+      dht.get.bind(dht, rpc.topicId.buffer, null),
+      dagCBOR.util.deserialize,
+      (topic, cb) => {
+        // Get the closest peer to the topic stored locally
+        const closestPeerId = dht.routingTable.closestPeer(rpc.topicId.buffer, 1)
+        pulsarcastNode._getPeer(closestPeerId, cb)
+      }
+    ], (err, peer) => {
+      // TODO handle error
+      if (err) {
+        log.error(err)
+        throw err
+      }
 
-    // TODO handle non-existent closestPeer
-    if (!closestPeerId) return
-
-    pulsarcastNode._getPeer(closestPeerId, (err, peer) => {
-      // TODO proper error handling
-      if (err) throw err
       // Add peer to my tree
       pulsarcastNode.me.addParents(rpc.topicId.toBaseEncodedString(), [peer])
-
       send(peer, rpc)
     })
   }

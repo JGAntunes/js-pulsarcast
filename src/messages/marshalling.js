@@ -27,7 +27,7 @@ function unmarshall (message) {
   if (message.topic) {
     result.topic = {
       ...message.topic,
-      author: linkUnmarshalling(message.topic.author),
+      author: bs58.encode(message.topic.author),
       parent: linkUnmarshalling(message.topic.parent)
     }
   }
@@ -70,7 +70,7 @@ function marshall (message) {
   if (message.topic) {
     result.topic = {
       ...message.topic,
-      author: linkMarshalling(message.topic.author),
+      author: bs58.decode(message.topic.author),
       parent: linkMarshalling(message.topic.parent)
     }
   }
