@@ -29,13 +29,13 @@ function createRPCHandlers (pulsarcastNode) {
     if (!message.event) return
 
     const {subscriptions} = pulsarcastNode
-    const topicCID = message.event.topic['/'].toBaseEncodedString()
-    // We're subscribed to this topic, emit the message
-    if (subscriptions.has(topicCID)) {
-      pulsarcastNode.emit(topicCID, message.event)
-    }
+    const topicCID = message.event.topicCID.toBaseEncodedString()
 
     log.debug('Got event %O', message)
+    // We're subscribed to this topic, emit the message
+    if (subscriptions.has(topicCID)) {
+      pulsarcastNode.emit(topicCID, message.event.serialize())
+    }
 
     pulsarcastNode.rpc.send.event(topicCID, message.event, idB58Str)
   }

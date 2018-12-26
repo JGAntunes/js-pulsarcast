@@ -3,6 +3,7 @@
 const bs58 = require('bs58')
 const CID = require('cids')
 
+const EventNode = require('../dag/event-node')
 const ops = require('./protobuffers').RPC.Operation
 
 function linkMarshalling (link) {
@@ -33,13 +34,7 @@ function unmarshall (message) {
   }
 
   if (message.event) {
-    result.event = {
-      ...message.event,
-      topic: linkUnmarshalling(message.event.topic),
-      publisher: bs58.encode(message.event.publisher),
-      payload: message.event.payload.toString('utf8'),
-      parent: linkUnmarshalling(message.event.parent)
-    }
+    result.event = EventNode.deserialize(message.event)
   }
 
   if (message.peerTree) {
@@ -76,13 +71,7 @@ function marshall (message) {
   }
 
   if (message.event) {
-    result.event = {
-      topic: linkMarshalling(message.event.topic),
-      publisher: bs58.decode(message.event.publisher),
-      payload: Buffer.from(message.event.payload, 'utf8'),
-      parent: linkMarshalling(message.event.parent),
-      metadata: message.event.metadata
-    }
+    result.event = message.event.serialize()
   }
 
   if (message.peerTree) {

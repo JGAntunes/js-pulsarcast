@@ -20,22 +20,26 @@ function createRPCHandlers (pulsarcastNode) {
     }
   }
 
-  function event (topicB58Str, event, fromIdB58Str) {
+  function event (topicB58Str, eventNode, fromIdB58Str) {
     const trees = pulsarcastNode.me.trees.get(topicB58Str)
     // TODO handle publishing to an event we're not subscribed to
     // TODO get topic
     if (!trees) return
     const { parents, children } = trees
-    const rpc = createRPC.event(topicB58Str, event)
+    // TODO next
+    const rpc = createRPC.event(topicB58Str, eventNode)
     // RPC message is being created at this node, not just forwardind,
     // so add it to DHT and propagate it through our whole topic tree
     if (!fromIdB58Str) {
       waterfall([
         (cb) => parallel([
-          dagCBOR.util.cid.bind(null, rpc.event),
-          dagCBOR.util.serialize.bind(null, rpc.event)
+          eventNode.getCID.bind(eventNode),
+          eventNode.serializeCBOR.bind(eventNode)
         ], cb),
-        ([cid, serialized], cb) => dht.put(cid.buffer, serialized, cb)
+        ([cid, serialized], cb) => {
+          log.trace(`Storing event with cid ${cid.toBaseEncodedString()}`)
+          dht.put(cid.buffer, serialized, cb)
+        }
       ], (err) => {
         // TODO handle error
         if (err) {
@@ -115,8 +119,10 @@ function createRPCHandlers (pulsarcastNode) {
 
   function send (peer, rpc) {
     log.trace(`Sending ${rpc.op} to ${peer.info.id.toB58String()}`)
+    log.debug(rpc)
 
     const rpcToSend = marshalling.marshall(rpc)
+    log.debug('Marshalled', rpcToSend)
     const encodedMessage = RPC.encode({msgs: [rpcToSend]})
 
     peer.sendMessages(encodedMessage)

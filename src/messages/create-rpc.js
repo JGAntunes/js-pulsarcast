@@ -2,26 +2,7 @@
 
 const CID = require('cids')
 
-const config = require('../config')
-
-
-function createMetadata () {
-  const now = new Date()
-  return {
-    protocolVersion: config.protocol,
-    created: now.toISOString()
-  }
-}
-
-function createLink (link) {
-  // No link
-  if (!link) return {}
-  // It's an object but empty
-  if (!link['/'] && typeof link === 'object') return {}
-  // It can be a link already or just the multihash
-  const newCID = link['/'] || link
-  return {'/': new CID(newCID)}
-}
+const { createMetadata, linkMarshalling } = require('../dag/utils')
 
 // Update RPC message will handle neighbourhood
 // updates
@@ -38,17 +19,11 @@ function update (topic, {parents, children}) {
   }
 }
 
-function event (topic, {publisher, parent, payload, metadata = createMetadata()}) {
+function event (topic, eventNode) {
   return {
     op: 'EVENT',
-    metadata,
-    event: {
-      topic: createLink(topic),
-      publisher,
-      parent: createLink(parent),
-      payload,
-      metadata
-    }
+    metadata: createMetadata(),
+    event: eventNode
   }
 }
 
@@ -74,7 +49,7 @@ function newTopic (name, {author, parent, metadata = createMetadata()}) {
     topic: {
       name,
       author,
-      parent: createLink(parent),
+      parent: linkMarshalling(parent),
       '#': {},
       metadata
     },

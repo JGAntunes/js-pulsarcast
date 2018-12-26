@@ -4,6 +4,7 @@ const EventEmitter = require('events')
 const assert = require('assert')
 const lp = require('pull-length-prefixed')
 const pull = require('pull-stream')
+const CID = require('cids')
 
 const log = require('./utils/logger')
 
@@ -11,13 +12,15 @@ const { protobuffers } = require('./messages')
 const { protocol } = require('./config')
 const Peer = require('./peer')
 const CreateRpcHandlers = require('./rpc')
+const EventNode = require('./dag/event-node')
 
 class Pulsarcast extends EventEmitter {
-  constructor (libp2p) {
+  constructor (libp2p, options = {}) {
     super()
 
     this.libp2p = libp2p
     this.started = false
+    this.eventLinkHandler = options.eventLinkHandler
 
     /**
      * Map of peers.
@@ -154,22 +157,19 @@ class Pulsarcast extends EventEmitter {
     setImmediate(() => callback())
   }
 
-  publish (topic, message) {
+  publish (topicB58Str, message) {
     assert(this.started, 'Pulsarcast is not started')
 
-    log(`Publishing message on topic ${topic}`)
+    log(`Publishing message on topic ${topicB58Str}`)
 
     const payload = Buffer.isBuffer(message)
       ? message
       : Buffer.from(message, 'utf8')
+    const topicCID = new CID(topicB58Str)
 
-    const event = {
-      publisher: this.me.info.id.toB58String(),
-      payload,
-      parent: null
-    }
+    const eventNode = new EventNode(topicCID, this.me.info.id.toB58String(), payload)
 
-    this.rpc.send.event(topic, event)
+    this.rpc.send.event(topicB58Str, eventNode)
   }
 
   subscribe (topic) {
