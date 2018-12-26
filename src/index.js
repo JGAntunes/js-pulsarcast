@@ -13,6 +13,7 @@ const { protocol } = require('./config')
 const Peer = require('./peer')
 const CreateRpcHandlers = require('./rpc')
 const EventNode = require('./dag/event-node')
+const EventTree = require('./dag/event-tree')
 
 class Pulsarcast extends EventEmitter {
   constructor (libp2p, options = {}) {
@@ -34,6 +35,9 @@ class Pulsarcast extends EventEmitter {
      * @type {Set<string>}
      */
     this.subscriptions = new Set()
+
+    // Our event tree
+    this.eventTrees = new Map()
 
     // This will store the peer neighbours
     this.me = new Peer(libp2p.peerInfo)
@@ -94,6 +98,27 @@ class Pulsarcast extends EventEmitter {
       const peer = this._addPeer(peerInfo, conn)
       callback(null, peer)
     })
+  }
+
+  _addEvent (topicCID, eventNode, cb) {
+    let eventTree
+    const topicB58Str = topicCID.toBaseEncodedString()
+
+    // Add event tree if it does not exist
+    if (this.eventTrees.has(topicB58Str)) {
+      eventTree = this.eventTrees.get(topicB58Str)
+    } else {
+      eventTree = new EventTree(topicCID)
+      this.eventTrees.set(topicB58Str, eventTree)
+    }
+
+    eventTree.add(eventNode, cb)
+  }
+
+  _getEvent (topicCID, eventCID) {
+    const topicB58Str = topicCID.toBaseEncodedString()
+    const eventTree = this.eventTrees.get(topicB58Str)
+    return eventTree.get(eventCID)
   }
 
   _onConnection (protocol, conn) {
@@ -168,8 +193,11 @@ class Pulsarcast extends EventEmitter {
     const topicCID = new CID(topicB58Str)
 
     const eventNode = new EventNode(topicCID, this.me.info.id.toB58String(), payload)
-
-    this.rpc.send.event(topicB58Str, eventNode)
+    this._addEvent(topicCID, eventNode, (err, linkedEvent) => {
+      // TODO proper error handling
+      if (err) throw err
+      this.rpc.send.event(topicB58Str, linkedEvent)
+    })
   }
 
   subscribe (topic) {

@@ -119,10 +119,8 @@ function createRPCHandlers (pulsarcastNode) {
 
   function send (peer, rpc) {
     log.trace(`Sending ${rpc.op} to ${peer.info.id.toB58String()}`)
-    log.debug(rpc)
 
     const rpcToSend = marshalling.marshall(rpc)
-    log.debug('Marshalled', rpcToSend)
     const encodedMessage = RPC.encode({msgs: [rpcToSend]})
 
     peer.sendMessages(encodedMessage)

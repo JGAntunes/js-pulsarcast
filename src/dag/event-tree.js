@@ -2,58 +2,62 @@
 
 const assert = require('assert')
 
-const log = require('./utils/logger')
+const log = require('../utils/logger')
 
 // TODO right now memory usage grows indefinitely
 class EventTree {
   // TODO probably need access to the DHT?
-  constructor (topicCID, ipld, options = {}) {
+  constructor (topicCID, options = {}) {
     // TODO check it is a CID maybe?
     assert(topicCID, 'Need a topicCID object to create an event tree')
     log.trace(`New event tree for topic ${topicCID.toBaseEncodedString()}`)
 
     this.topicCID = topicCID
     this.linkHandler = options.linkHandler || mostRecentParent
-    this.ipld = ipld
-    this.index = new WeakMap()
-    this.events = []
+    this.eventTree = new Map()
     this.mostRecent = null
   }
 
-  add (eventCID, event) {
-    let newEvent = Object.assign({}, event)
+  // TODO right we're mutating eventNode inside this function
+  // maybe we should consider a better way?
+  add (eventNode, cb) {
+    // let newEvent = Object.assign({}, eventNode)
 
-    if (!newEvent.parent) {
-      newEvent = this.linkHanlder(eventCID, event, this.index, this.events)
+    if (!eventNode.parent) {
+      this.linkHandler(eventNode, this)
     }
 
-    // TODO HACK if we don't have the latest state on the topic
-    // we're basically breaking the tree...
-    if (!this.mostRecent) {
-      this.mostReecent = eventCID
-    }
-    const mostRecent = this.get(this.mostRecent)
-    if (mostRecent.metadate.created < event.metadata.createed) {
-      this.mostRecent = eventCID
-    }
+    eventNode.getCID((err, eventCID) => {
+      if (err) return cb(err)
+      // TODO HACK if we don't have the latest state on the topic
+      // we're basically breaking the tree...
+      if (!this.mostRecent) {
+        this.mostRecent = eventCID
+      } else {
+        const mostRecent = this.get(this.mostRecent)
 
-    this.index.set(eventCID.toBaseEncodedString(), newEvent)
-    this.events.push(newEvent)
+        if (mostRecent.metadata.created < eventNode.metadata.createed) {
+          this.mostRecent = eventCID
+        }
+      }
+
+      this.eventTree.set(eventCID.toBaseEncodedString(), eventNode)
+      return cb(null, eventNode)
+    })
   }
 
   get (eventCID) {
-
+    return this.eventTree.get(eventCID.toBaseEncodedString())
   }
 
   // TODO to should be optional and could be a CID or a number
   // defaults to 1 level of resolution
   resolve (fromCID, to) {
-
   }
 }
 
-function mostRecentParent (eventCID, event, eventTree) {
-  return Object.assign({}, event, {parent: eventTree.mostRecent})
+function mostRecentParent (eventNode, eventTree) {
+  return Object.assign(eventNode, {parent: eventTree.mostRecent})
 }
 
 module.exports = EventTree
