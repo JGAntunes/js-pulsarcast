@@ -96,16 +96,16 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   // TODO for now only put topic descriptor
-  function newTopic (name, options) {
-    const rpc = createRPC.topic.new(name, options)
+  function newTopic (topicNode, options) {
+    // const rpc = createRPC.topic.new(topicNode)
 
     waterfall([
       (cb) => parallel([
-        dagCBOR.util.cid.bind(null, rpc.topic),
-        dagCBOR.util.serialize.bind(null, rpc.topic)
+        topicNode.getCID.bind(topicNode),
+        topicNode.serializeCBOR.bind(topicNode)
       ], cb),
       ([cid, serialized], cb) => {
-        log.trace(`Topic ${name} cid is ${cid.toBaseEncodedString()}`)
+        log.trace(`Topic ${topicNode.name} cid is ${cid.toBaseEncodedString()}`)
         dht.put(cid.buffer, serialized, cb)
       }
     ], (err) => {
@@ -113,7 +113,7 @@ function createRPCHandlers (pulsarcastNode) {
       if (err) {
         log.error(err)
       }
-      log.trace(`Topic ${name} stored in DHT`)
+      log.trace(`Topic ${topicNode.name} stored in DHT`)
     })
   }
 

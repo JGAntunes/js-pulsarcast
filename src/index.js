@@ -14,6 +14,8 @@ const Peer = require('./peer')
 const CreateRpcHandlers = require('./rpc')
 const EventNode = require('./dag/event-node')
 const EventTree = require('./dag/event-tree')
+const TopicNode = require('./dag/topic-node')
+const TopicTree = require('./dag/topic-tree')
 
 class Pulsarcast extends EventEmitter {
   constructor (libp2p, options = {}) {
@@ -36,8 +38,10 @@ class Pulsarcast extends EventEmitter {
      */
     this.subscriptions = new Set()
 
-    // Our event tree
+    // Our event trees
     this.eventTrees = new Map()
+    // Our topic tree
+    this.topicTree = new TopicTree()
 
     // This will store the peer neighbours
     this.me = new Peer(libp2p.peerInfo)
@@ -98,6 +102,10 @@ class Pulsarcast extends EventEmitter {
       const peer = this._addPeer(peerInfo, conn)
       callback(null, peer)
     })
+  }
+
+  _addTopic (topicNode, cb) {
+    this.topicTree.add(topicNode, cb)
   }
 
   _addEvent (topicCID, eventNode, cb) {
@@ -220,12 +228,13 @@ class Pulsarcast extends EventEmitter {
 
     log(`Creating topic ${topicName}`)
 
-    const options = {
-      author: this.me.info.id.toB58String(),
-      parent,
-      '#': {}
-    }
-    this.rpc.send.topic.new(topicName, options)
+    const topicNode = new TopicNode(topicName, this.me.info.id.toB58String())
+    this._addTopic(topicNode, (err, linkedTopic) => {
+      // TODO proper error handling
+      if (err) throw err
+
+      this.rpc.send.topic.new(linkedTopic)
+    })
   }
 }
 

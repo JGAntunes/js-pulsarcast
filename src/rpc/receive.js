@@ -4,6 +4,7 @@ const Joi = require('joi')
 const dagCBOR = require('ipld-dag-cbor')
 const { waterfall } = require('async')
 
+const TopicNode = require('../dag/topic-node')
 const log = require('../utils/logger')
 const { protobuffers, schemas, marshalling } = require('../messages')
 
@@ -65,7 +66,8 @@ function createRPCHandlers (pulsarcastNode) {
     waterfall([
       dht.get.bind(dht, message.topicId.buffer, null),
       dagCBOR.util.deserialize
-    ], (err, dagNode) => {
+    ], (err, serializedTopicNode) => {
+      const topicNode = TopicNode.deserialize(serializedTopicNode)
       // TODO handle error
       if (err) {
         log.error(err)
@@ -75,11 +77,11 @@ function createRPCHandlers (pulsarcastNode) {
       me.addChildren(topicCID, [child])
       // TODO take care of delivering initial state
       // This node is the root node for the topic
-      if (me.info.id.toB58String() === dagNode.author) return
+      if (me.info.id.toB58String() === topicNode.author) return
       // Check if we have a set of parents for this topic
       if (me.trees.get(topicCID).parents > 0) return
 
-      pulsarcastNode.rpc.send.join(topicCID)
+      pulsarcastNode.rpc.send.topic.join(topicCID)
     })
   }
 

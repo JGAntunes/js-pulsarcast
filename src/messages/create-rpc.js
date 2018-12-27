@@ -2,7 +2,7 @@
 
 const CID = require('cids')
 
-const { createMetadata, linkMarshalling } = require('../dag/utils')
+const { createMetadata } = require('../dag/utils')
 
 // Update RPC message will handle neighbourhood
 // updates
@@ -43,17 +43,11 @@ function leaveTopic (topic) {
   }
 }
 
-function newTopic (name, {author, parent, metadata = createMetadata()}) {
+function newTopic (topicNode) {
   return {
     op: 'NEW_TOPIC',
-    topic: {
-      name,
-      author,
-      parent: linkMarshalling(parent),
-      '#': {},
-      metadata
-    },
-    metadata
+    topic: topicNode,
+    metadata: createMetadata()
   }
 }
 
