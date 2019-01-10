@@ -1,0 +1,23 @@
+stages:
+  - release
+
+variables:
+  IPFS_GIT_REPO: "https://gitlab.com/jgantunes/js-ipfs"
+
+
+# Trigger the js-ipfs project pipeline
+trigger-ipfs-build:
+  stage: release
+  image: appropriate/curl:latest
+  tags:
+    - docker
+  variables:
+    # Disable git usage
+    GIT_STRATEGY: none
+  script:
+    - curl --request POST
+      --form "token=${CI_JOB_TOKEN}"
+      --form ref=master
+      ${IPFS_GIT_REPO}/trigger/pipeline
+  only:
+    - master
