@@ -2,7 +2,7 @@ stages:
   - release
 
 variables:
-  IPFS_GIT_REPO: "https://gitlab.com/jgantunes/js-ipfs"
+  IPFS_GIT_REPO: "https://gitlab.com/api/v4/projects/10273306"
 
 
 # Trigger the js-ipfs project pipeline
