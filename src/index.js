@@ -52,7 +52,7 @@ class Pulsarcast extends EventEmitter {
     this.libp2p._switch.observer.on('message',
       (peerId, transport, msgProtocol, direction, bufferLength) => {
         if (msgProtocol === protocol) {
-          log.trace({ peerId, transport, protocol, direction, bufferLength })
+          log.trace('message trace %j', { peerId, transport, protocol, direction, bufferLength })
         }
       }
     )
@@ -63,7 +63,7 @@ class Pulsarcast extends EventEmitter {
 
   _addPeer (peerInfo, conn) {
     const idB58Str = peerInfo.id.toB58String()
-    log.trace(`Adding peer ${idB58Str}`)
+    log.trace('Adding peer %j', {peer: idB58Str})
     // Check to see if we already have the peer registered
     let peer = this.peers.get(idB58Str)
     // We already have the peer listed, just attach to connection
@@ -89,14 +89,14 @@ class Pulsarcast extends EventEmitter {
   _getPeer (peerId, callback) {
     const idB58Str = peerId.toB58String()
     const peer = this.peers.get(idB58Str)
-    log.trace(`Get peer ${idB58Str}`)
+    log.trace('Looking for peer %j', {peer: idB58Str})
     // We already have the peer in our list
     if (peer) return setImmediate(callback, null, peer)
 
     // Let's dial to it
     this.libp2p.dialProtocol(peerId, protocol, (err, conn) => {
       if (err) return callback(err)
-      log.trace(`Dialing peer ${idB58Str}`)
+      log.trace('Dialing peer %j', {peer: idB58Str})
 
       const peerInfo = this.libp2p.peerBook.get(peerId)
       const peer = this._addPeer(peerInfo, conn)
@@ -132,7 +132,7 @@ class Pulsarcast extends EventEmitter {
   _onConnection (protocol, conn) {
     conn.getPeerInfo((err, peerInfo) => {
       if (err) {
-        log.err('Failed to identify incomming conn', err)
+        log.err('Failed to identify incomming conn %j', err)
         // Terminate the pull stream
         return pull(pull.empty(), conn)
       }
@@ -142,7 +142,7 @@ class Pulsarcast extends EventEmitter {
   }
 
   _listenToPeerConn (idB58Str, conn, peer) {
-    log(`Listening to peer connection ${idB58Str}`)
+    log.trace('Listening to peer %j', {peer: idB58Str})
     pull(
       conn,
       lp.decode(),
@@ -155,7 +155,7 @@ class Pulsarcast extends EventEmitter {
   }
 
   _onRPC (idB58Str, rpc) {
-    log(`RPC message from ${idB58Str}`)
+    // log(`RPC message from ${idB58Str}`)
     // Check if we have any RPC msgs
     if (!rpc || !rpc.msgs) return
 
@@ -163,9 +163,11 @@ class Pulsarcast extends EventEmitter {
   }
 
   _onConnectionEnd (idB58Str, peer, err) {
-    log.error(`Error from ${idB58Str}`, err)
+    if (err) {
+      log.error(`Error from ${idB58Str} %j`, err)
+    }
     peer.close(() => {
-      log.trace(`Successfully closed connection for peer ${idB58Str}`)
+      log.trace('Closed connection to peer', {peer: idB58Str})
     })
   }
 
@@ -193,7 +195,7 @@ class Pulsarcast extends EventEmitter {
   publish (topicB58Str, message) {
     assert(this.started, 'Pulsarcast is not started')
 
-    log(`Publishing message on topic ${topicB58Str}`)
+    log.trace('Publishing message %j', {command: 'publish', topic: topicB58Str})
 
     const payload = Buffer.isBuffer(message)
       ? message
@@ -208,14 +210,14 @@ class Pulsarcast extends EventEmitter {
     })
   }
 
-  subscribe (topic) {
+  subscribe (topicB58Str) {
     assert(this.started, 'Pulsarcast is not started')
 
-    log(`Subscribing to topic ${topic}`)
+    log.trace('Subscribing to topic %j', {command: 'subscribe', topic: topicB58Str})
 
-    this.subscriptions.add(topic)
+    this.subscriptions.add(topicB58Str)
 
-    this.rpc.send.topic.join(topic)
+    this.rpc.send.topic.join(topicB58Str)
   }
 
   unsubscribe (topics) {
@@ -226,7 +228,7 @@ class Pulsarcast extends EventEmitter {
   createTopic (topicName, { parent = null } = {}) {
     assert(this.started, 'Pulsarcast is not started')
 
-    log(`Creating topic ${topicName}`)
+    log.trace('Creating topic %j', {command: 'subscribe', topicName})
 
     const topicNode = new TopicNode(topicName, this.me.info.id.toB58String())
     this._addTopic(topicNode, (err, linkedTopic) => {

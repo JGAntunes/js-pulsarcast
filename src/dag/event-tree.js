@@ -16,6 +16,10 @@ class EventTree {
     this.linkHandler = options.linkHandler || mostRecentParent
     this.eventTree = new Map()
     this.mostRecent = null
+
+    log.trace('New event tree %j', {
+      topic: topicCID.toBaseEncodedString()
+    })
   }
 
   // TODO right we're mutating eventNode inside this function

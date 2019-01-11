@@ -15,13 +15,19 @@ class EventNode {
   constructor (topicCID, publisher, payload, options = {}) {
     // TODO check it is a CID maybe?
     assert(topicCID, 'Need a topicCID object to create an event tree')
-    log.trace(`New event tree for topic ${topicCID.toBaseEncodedString()}`)
 
     this.topicCID = topicCID
     this.publisher = publisher
     this.payload = payload
     this.parent = options.parent
     this.metadata = options.metadata || createMetadata()
+
+    log.trace('New event node %j', {
+      topic: topicCID.toBaseEncodedString(),
+      publisher,
+      parent: this.parent ? this.parent.toBaseEncodedString() : null,
+      metadata: this.metadata
+    })
   }
 
   static deserialize (event) {

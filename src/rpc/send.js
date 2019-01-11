@@ -37,13 +37,13 @@ function createRPCHandlers (pulsarcastNode) {
           eventNode.serializeCBOR.bind(eventNode)
         ], cb),
         ([cid, serialized], cb) => {
-          log.trace(`Storing event with cid ${cid.toBaseEncodedString()}`)
+          log.trace('Storing event %j', {cid: cid.toBaseEncodedString()})
           dht.put(cid.buffer, serialized, cb)
         }
       ], (err) => {
         // TODO handle error
         if (err) {
-          log.error(err)
+          log.error('%j', err)
         }
       })
 
@@ -81,7 +81,7 @@ function createRPCHandlers (pulsarcastNode) {
     ], (err, peer) => {
       // TODO handle error
       if (err) {
-        log.error(err)
+        log.error('%j', err)
         throw err
       }
 
@@ -105,20 +105,20 @@ function createRPCHandlers (pulsarcastNode) {
         topicNode.serializeCBOR.bind(topicNode)
       ], cb),
       ([cid, serialized], cb) => {
-        log.trace(`Topic ${topicNode.name} cid is ${cid.toBaseEncodedString()}`)
+        log.trace('Topic created %j', {name: topicNode.name, cid: cid.toBaseEncodedString()})
         dht.put(cid.buffer, serialized, cb)
       }
     ], (err) => {
       // TODO proper error handling
       if (err) {
-        log.error(err)
+        log.error('%j', err)
       }
-      log.trace(`Topic ${topicNode.name} stored in DHT`)
+      log.trace('Topic stored %j', {name: topicNode.name})
     })
   }
 
   function send (peer, rpc) {
-    log.trace(`Sending ${rpc.op} to ${peer.info.id.toB58String()}`)
+    log.trace('Sending rpc %j', {handler: 'out', op: rpc.op, to: peer.info.id.toB58String()})
 
     const rpcToSend = marshalling.marshall(rpc)
     const encodedMessage = RPC.encode({msgs: [rpcToSend]})

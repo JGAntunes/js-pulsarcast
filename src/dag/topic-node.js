@@ -19,6 +19,13 @@ class TopicNode {
     this.subTopics = options.subTopics
     this.parent = options.parent
     this.metadata = options.metadata || createMetadata()
+
+    log.trace('New topic node %j', {
+      name,
+      author,
+      parent: this.parent ? this.parent.toBaseEncodedString() : null,
+      metadata: this.metadata
+    })
   }
 
   static deserialize (topic) {

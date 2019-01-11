@@ -24,11 +24,8 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   function event (idB58Str, message) {
-    log.trace(`Got event from  ${idB58Str}`)
-
     // Only consider the message if we have data
     if (!message.event) return
-
     const {subscriptions} = pulsarcastNode
     const topicCID = message.event.topicCID.toBaseEncodedString()
 
@@ -42,8 +39,6 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   function update (idB58Str, message) {
-    log.trace(`Got update from  ${idB58Str}`)
-
     // Only consider the message if we have data
     if (!message.peerTree) return
     const topicCID = message.peerTree.topicId.toBaseEncodedString()
@@ -53,8 +48,6 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   function join (idB58Str, message) {
-    log.trace(`Got join from  ${idB58Str}`)
-
     const {me, peers} = pulsarcastNode
     const topicCID = message.topicId.toBaseEncodedString()
 
@@ -70,7 +63,7 @@ function createRPCHandlers (pulsarcastNode) {
       const topicNode = TopicNode.deserialize(serializedTopicNode)
       // TODO handle error
       if (err) {
-        log.error(err)
+        log.error('%j', err)
         throw err
       }
       // Add this peer as a child to this topic tree
@@ -86,7 +79,6 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   function leave (idB58Str, message) {
-    log.trace(`Got leave from  ${idB58Str}`)
     // TODO leave logic
   }
 
@@ -104,6 +96,8 @@ function createRPCHandlers (pulsarcastNode) {
     // We use the resulting message from the validation
     // with type coercion
     const jsonMessage = marshalling.unmarshall(result.value)
+    
+    log.trace('Received rpc %j', {handler: 'in', op: jsonMessage.op, from: idB58Str})
 
     switch (ops[jsonMessage.op]) {
       // case ops.PING:

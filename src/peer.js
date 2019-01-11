@@ -10,7 +10,7 @@ const log = require('./utils/logger')
 
 class Peer extends EventEmitter {
   constructor (peerInfo, conn = null) {
-    log(`New peer ${peerInfo.id.toB58String()} registered`)
+    log.trace('New peer registered %j', {peer: peerInfo.id.toB58String()})
     assert(peerInfo, 'Need a peerInfo object to initiate the peer')
     super()
 
@@ -51,7 +51,7 @@ class Peer extends EventEmitter {
   }
 
   sendMessages (messages) {
-    log.trace('Pushing message')
+    log.trace('Pushing message to peer %j', {peer: this.info.id.toB58String()})
     this.stream.push(messages)
   }
 
