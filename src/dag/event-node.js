@@ -4,10 +4,10 @@ const assert = require('assert')
 const bs58 = require('bs58')
 const dagCBOR = require('ipld-dag-cbor')
 
+const config = require('../config')
 const log = require('../utils/logger')
 const {
   linkUnmarshalling,
-  createMetadata,
   linkMarshalling
 } = require('./utils')
 
@@ -18,6 +18,8 @@ class EventNode {
 
     this.topicCID = topicCID
     this.publisher = publisher
+    // Default author is the publisher
+    this.author = options.author || publisher
     this.payload = payload
     this.parent = options.parent
     this.metadata = options.metadata || createMetadata()
@@ -68,5 +70,14 @@ class EventNode {
     dagCBOR.util.serialize(serialized, cb)
   }
 }
+
+function createMetadata () {
+  const now = new Date()
+  return {
+    protocolVersion: config.protocol,
+    created: now.toISOString()
+  }
+}
+
 
 module.exports = EventNode

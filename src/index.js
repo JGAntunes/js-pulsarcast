@@ -206,7 +206,7 @@ class Pulsarcast extends EventEmitter {
     this._addEvent(topicCID, eventNode, (err, linkedEvent) => {
       // TODO proper error handling
       if (err) throw err
-      this.rpc.send.event(topicB58Str, linkedEvent)
+      this.rpc.send.event.publish(topicB58Str, linkedEvent)
     })
   }
 

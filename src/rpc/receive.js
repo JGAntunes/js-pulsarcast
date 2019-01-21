@@ -14,28 +14,62 @@ function createRPCHandlers (pulsarcastNode) {
   const dht = pulsarcastNode.libp2p._dht
 
   return {
-    event,
     update,
     topic: {
       join,
       leave
     },
+    event: {
+      publish,
+      requestToPublish
+    },
     genericHandler
   }
 
-  function event (idB58Str, message) {
+  function publish (idB58Str, message) {
     // Only consider the message if we have data
     if (!message.event) return
-    const {subscriptions} = pulsarcastNode
-    const topicCID = message.event.topicCID.toBaseEncodedString()
+    const {me, peers, subscriptions} = pulsarcastNode
+    const topicB58Str = message.event.topicCID.toBaseEncodedString()
 
-    log.debug('Got event %O', message)
+    log.debug('Got publish %O', message)
+
+    waterfall([
+      dht.get.bind(dht, message.topicId.buffer, null),
+      dagCBOR.util.deserialize
+    ], (err, serializedTopicNode) => {
+      const topicNode = TopicNode.deserialize(serializedTopicNode)
+      // TODO handle error
+      if (err) {
+        log.error('%j', err)
+        throw err
+      }
+// TODO NEXT
+      // I'm the author, safe to publish 
+      if (me.info.id.toB58String() === topicNode.author) {
+        return pulsarcastNode.rpc.send.event.publish(topicNode, message.event)
+      }
+
+      // This is a chain based topic
+      if (topicNode.metadata.eventTopology !== 'chain') {}
+
+      // Propagate request to publish
+      pulsarcastNode.rpc.send.event.requestToPublish(topicB58Str, message);
     // We're subscribed to this topic, emit the message
-    if (subscriptions.has(topicCID)) {
-      pulsarcastNode.emit(topicCID, message.event.serialize())
+    if (subscriptions.has(topicB58Str)) {
+      pulsarcastNode.emit(topicB58Str, message.event.serialize())
     }
 
-    pulsarcastNode.rpc.send.event(topicCID, message.event, idB58Str)
+    pulsarcastNode.rpc.send.event.publish(topicB58Str, message.event, idB58Str)
+  }
+
+  function requestToPublish (idB58Str, message) {
+    // TODO
+    // Only consider the message if we have data
+    if (!message.event) return
+
+    log.debug('Got request to publish  %O', message)
+
   }
 
   function update (idB58Str, message) {
@@ -104,7 +138,9 @@ function createRPCHandlers (pulsarcastNode) {
       //   return ping(idB58Str, jsonMessage)
       case ops.UPDATE:
         return update(idB58Str, jsonMessage)
-      case ops.EVENT:
+      case ops.PUBLISH_EVENT:
+        return event(idB58Str, jsonMessage)
+      case ops.REQUEST_TO_PUBLISH:
         return event(idB58Str, jsonMessage)
       case ops.JOIN_TOPIC:
         return join(idB58Str, jsonMessage)

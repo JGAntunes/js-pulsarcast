@@ -2,16 +2,6 @@
 
 const CID = require('cids')
 
-const config = require('../config')
-
-function createMetadata () {
-  const now = new Date()
-  return {
-    protocolVersion: config.protocol,
-    created: now.toISOString()
-  }
-}
-
 function linkMarshalling (link) {
   // No link
   if (!link) return {}

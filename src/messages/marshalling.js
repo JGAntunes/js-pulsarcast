@@ -67,9 +67,7 @@ function marshall (message) {
   }
 
   // Convert OP string to a valid int
-  result.op = Object.entries(ops).find(([op, value]) => {
-    return op === message.op
-  })[1]
+  result.op = ops[message.op]
 
   return result
 }

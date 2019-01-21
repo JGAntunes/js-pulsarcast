@@ -19,9 +19,17 @@ function update (topic, {parents, children}) {
   }
 }
 
-function event (topic, eventNode) {
+function publish (topic, eventNode) {
   return {
-    op: 'EVENT',
+    op: 'PUBLISH_EVENT',
+    metadata: createMetadata(),
+    event: eventNode
+  }
+}
+
+function requestToPublish (topic, eventNode) {
+  return {
+    op: 'REQUEST_TO_PUBLISH',
     metadata: createMetadata(),
     event: eventNode
   }
@@ -54,7 +62,10 @@ function newTopic (topicNode) {
 // TODO perform response validation
 module.exports = {
   update,
-  event,
+  event: {
+    publish,
+    requestToPublish
+  },
   topic: {
     join: joinTopic,
     leave: leaveTopic,

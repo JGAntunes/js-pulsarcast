@@ -12,7 +12,10 @@ function createRPCHandlers (pulsarcastNode) {
   const dht = pulsarcastNode.libp2p._dht
 
   return {
-    event,
+    event: {
+      publish,
+      requestToPublish
+    },
     topic: {
       join: joinTopic,
       leave: leaveTopic,
@@ -20,7 +23,7 @@ function createRPCHandlers (pulsarcastNode) {
     }
   }
 
-  function event (topicB58Str, eventNode, fromIdB58Str) {
+  function publish (topicNode, eventNode, fromIdB58Str) {
     const trees = pulsarcastNode.me.trees.get(topicB58Str)
     // TODO handle publishing to an event we're not subscribed to
     // TODO get topic
@@ -52,16 +55,17 @@ function createRPCHandlers (pulsarcastNode) {
       return
     }
 
-    // Need to check where to forward the message
-    if (parents.find(peer => peer.info.id.toB58String() === fromIdB58Str)) {
-      // Need to forward the message to our children
-      children.forEach(children => send(children, rpc))
-    }
+    // Just need to forward it
+    const peers = [...parents, ...children]
+    peers.forEach(peer => {
+      // Don't forward the message back
+      if(peer.info.id.toB58String() === fromIdB58Str) return
+      send(peer, rpc)
+    })
+  }
 
-    if (children.find(peer => peer.info.id.toB58String() === fromIdB58Str)) {
-      // Need to forward the message to our parents
-      parents.forEach(parent => send(parent, rpc))
-    }
+  function requestToPublish (topicB58Str, eventNode, fromIdB58Str) {
+    // TODO
   }
 
   // Join finds the closest peer to the topic CID
