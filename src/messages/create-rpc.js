@@ -19,7 +19,7 @@ function update (topic, {parents, children}) {
   }
 }
 
-function publish (topic, eventNode) {
+function publish (eventNode) {
   return {
     op: 'PUBLISH_EVENT',
     metadata: createMetadata(),
@@ -27,7 +27,7 @@ function publish (topic, eventNode) {
   }
 }
 
-function requestToPublish (topic, eventNode) {
+function requestToPublish (eventNode) {
   return {
     op: 'REQUEST_TO_PUBLISH',
     metadata: createMetadata(),

@@ -1,7 +1,6 @@
 'use strict'
 
 const Joi = require('joi')
-const dagCBOR = require('ipld-dag-cbor')
 const { waterfall } = require('async')
 
 const TopicNode = require('../dag/topic-node')
@@ -29,47 +28,71 @@ function createRPCHandlers (pulsarcastNode) {
   function publish (idB58Str, message) {
     // Only consider the message if we have data
     if (!message.event) return
-    const {me, peers, subscriptions} = pulsarcastNode
+    const {me, subscriptions} = pulsarcastNode
     const topicB58Str = message.event.topicCID.toBaseEncodedString()
+    const meB58Str = me.info.id.toB58String()
 
     log.debug('Got publish %O', message)
 
-    waterfall([
-      dht.get.bind(dht, message.topicId.buffer, null),
-      dagCBOR.util.deserialize
-    ], (err, serializedTopicNode) => {
-      const topicNode = TopicNode.deserialize(serializedTopicNode)
+    getTopicNode(message.event.topicCID, (err, topicNode) => {
       // TODO handle error
       if (err) {
         log.error('%j', err)
         throw err
       }
-// TODO NEXT
-      // I'm the author, safe to publish 
-      if (me.info.id.toB58String() === topicNode.author) {
-        return pulsarcastNode.rpc.send.event.publish(topicNode, message.event)
+
+      const {
+        allowedPublishers,
+        requestToPublish
+      } = topicNode.metadata
+
+      if (allowedPublishers && !allowedPublishers.includes(meB58Str)) {
+        if (requestToPublish) {
+          if (!Array.isArray(requestToPublish) || requestToPublish.includes(meB58Str)) {
+            // Propagate request to publish
+            return pulsarcastNode.rpc.send.event.requestToPublish(topicNode, message.event)
+          }
+        }
+      }
+      // We're subscribed to this topic, emit the message
+      if (subscriptions.has(topicB58Str)) {
+        pulsarcastNode.emit(topicB58Str, message.event)
       }
 
-      // This is a chain based topic
-      if (topicNode.metadata.eventTopology !== 'chain') {}
-
-      // Propagate request to publish
-      pulsarcastNode.rpc.send.event.requestToPublish(topicB58Str, message);
-    // We're subscribed to this topic, emit the message
-    if (subscriptions.has(topicB58Str)) {
-      pulsarcastNode.emit(topicB58Str, message.event.serialize())
-    }
-
-    pulsarcastNode.rpc.send.event.publish(topicB58Str, message.event, idB58Str)
+      const options = {}
+      // Publish is from this node so we need to store the event
+      if (meB58Str === idB58Str) {
+        options.store = true
+      }
+      pulsarcastNode.rpc.send.event.publish(topicNode, message.event, idB58Str, options)
+    })
   }
 
   function requestToPublish (idB58Str, message) {
-    // TODO
     // Only consider the message if we have data
     if (!message.event) return
+    const {me} = pulsarcastNode
+    const meB58Str = me.info.id.toB58String()
 
     log.debug('Got request to publish  %O', message)
 
+    getTopicNode(message.event.topicCID, (err, topicNode) => {
+      // TODO handle error
+      if (err) {
+        log.error('%j', err)
+        throw err
+      }
+
+      const {allowedPublishers} = topicNode.metadata
+
+      // Publish if I'm allowed to
+      if (!allowedPublishers || allowedPublishers.includes(meB58Str)) {
+        return pulsarcastNode.rpc.send.event.publish(topicNode, message.event, idB58Str, {store: true})
+      }
+
+      // Propagate the request
+      pulsarcastNode.rpc.send.event.requestToPublish(topicNode, message.event)
+    })
   }
 
   function update (idB58Str, message) {
@@ -89,12 +112,7 @@ function createRPCHandlers (pulsarcastNode) {
     // we received a message from it
     const child = peers.get(idB58Str)
 
-    // Get the topic descriptor from the DHT
-    waterfall([
-      dht.get.bind(dht, message.topicId.buffer, null),
-      dagCBOR.util.deserialize
-    ], (err, serializedTopicNode) => {
-      const topicNode = TopicNode.deserialize(serializedTopicNode)
+    getTopicNode(message.topicId, (err, topicNode) => {
       // TODO handle error
       if (err) {
         log.error('%j', err)
@@ -130,7 +148,7 @@ function createRPCHandlers (pulsarcastNode) {
     // We use the resulting message from the validation
     // with type coercion
     const jsonMessage = marshalling.unmarshall(result.value)
-    
+
     log.trace('Received rpc %j', {handler: 'in', op: jsonMessage.op, from: idB58Str})
 
     switch (ops[jsonMessage.op]) {
@@ -139,14 +157,22 @@ function createRPCHandlers (pulsarcastNode) {
       case ops.UPDATE:
         return update(idB58Str, jsonMessage)
       case ops.PUBLISH_EVENT:
-        return event(idB58Str, jsonMessage)
+        return publish(idB58Str, jsonMessage)
       case ops.REQUEST_TO_PUBLISH:
-        return event(idB58Str, jsonMessage)
+        return requestToPublish(idB58Str, jsonMessage)
       case ops.JOIN_TOPIC:
         return join(idB58Str, jsonMessage)
       case ops.LEAVE_TOPIC:
         return leave(idB58Str, jsonMessage)
     }
+  }
+
+  // Helper func
+  function getTopicNode (topicCID, cb) {
+    waterfall([
+      dht.get.bind(dht, topicCID.buffer, null),
+      TopicNode.deserializeCBOR
+    ], cb)
   }
 }
 
