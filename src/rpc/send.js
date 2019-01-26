@@ -1,6 +1,5 @@
 'use strict'
 
-const dagCBOR = require('ipld-dag-cbor')
 const { parallel, waterfall } = require('async')
 
 const { createRPC, marshalling, protobuffers } = require('../messages')
@@ -89,29 +88,27 @@ function createRPCHandlers (pulsarcastNode) {
 
   // Join finds the closest peer to the topic CID
   // and sends the rpc join message
-  function joinTopic (topic) {
-    // TODO NEXT move this to receivw
-    const rpc = createRPC.topic.join(topic)
-
-    waterfall([
-      // Get the actual topic descriptor
-      dht.get.bind(dht, rpc.topicId.buffer, null),
-      dagCBOR.util.deserialize,
-      (topic, cb) => {
-        // Get the closest peer to the topic stored locally
-        const closestPeerId = dht.routingTable.closestPeer(rpc.topicId.buffer, 1)
-        pulsarcastNode._getPeer(closestPeerId, cb)
-      }
-    ], (err, peer) => {
+  function joinTopic (topicNode) {
+    topicNode.getCID((err, topicCID) => {
       // TODO handle error
       if (err) {
         log.error('%j', err)
         throw err
       }
 
-      // Add peer to my tree
-      pulsarcastNode.me.addParents(rpc.topicId.toBaseEncodedString(), [peer])
-      send(peer, rpc)
+      const rpc = createRPC.topic.join(topicCID)
+      // Get the closest peer to the topic stored locally
+      const closestPeerId = dht.routingTable.closestPeer(topicCID.buffer, 1)
+      pulsarcastNode._getPeer(closestPeerId, (err, peer) => {
+        // TODO handle error
+        if (err) {
+          log.error('%j', err)
+          throw err
+        }
+        // Add peer to my tree
+        pulsarcastNode.me.addParents(topicCID.toBaseEncodedString(), [peer])
+        send(peer, rpc)
+      })
     })
   }
 
