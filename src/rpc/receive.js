@@ -109,7 +109,6 @@ function createRPCHandlers (pulsarcastNode) {
     const {me, peers} = pulsarcastNode
     const topicB58Str = topicCID.toBaseEncodedString()
 
-log.debug('Join %s', topicB58Str)
     // The peer should already be in the list given that
     // we received a message from it
     const child = peers.get(idB58Str)
@@ -153,7 +152,6 @@ log.debug('Join %s', topicB58Str)
     // with type coercion
     const jsonMessage = marshalling.unmarshall(result.value)
 
-log.debug('MEEESSAAAGE %j', message)
     log.trace('Received rpc %j', {handler: 'in', op: jsonMessage.op, from: idB58Str})
 
     switch (ops[jsonMessage.op]) {

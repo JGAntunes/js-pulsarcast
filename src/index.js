@@ -185,7 +185,6 @@ class Pulsarcast extends EventEmitter {
   }
 
   subscribe (topicB58Str) {
-    try {
     assert(this.started, 'Pulsarcast is not started')
 
     log.trace('Subscribing to topic %j', {command: 'subscribe', topic: topicB58Str})
@@ -194,8 +193,6 @@ class Pulsarcast extends EventEmitter {
     const topicCID = new CID(topicB58Str)
 
     this.rpc.receive.topic.join(this.me.info.id.toB58String(), topicCID)
-
-    } catch(e) {log.debug(e)}
   }
 
   unsubscribe (topics) {

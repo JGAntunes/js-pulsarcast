@@ -93,5 +93,4 @@ function createMetadata ({
   }
 }
 
-
 module.exports = EventNode

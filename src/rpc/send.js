@@ -154,13 +154,7 @@ function createRPCHandlers (pulsarcastNode) {
   function send (peer, rpc) {
     log.trace('Sending rpc %j', {handler: 'out', op: rpc.op, to: peer.info.id.toB58String()})
 
-log.debug('%j', rpc)
     const rpcToSend = marshalling.marshall(rpc)
-log.debug('%j', rpcToSend)
-    if (rpc.event) {
-      log.debug('%s', rpc.event.metadata.created instanceof Date)
-      log.debug('%s', rpcToSend.event.metadata.created instanceof Date)
-    }
     const encodedMessage = RPC.encode({msgs: [rpcToSend]})
 
     peer.sendMessages(encodedMessage)
