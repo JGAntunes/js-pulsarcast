@@ -9,7 +9,7 @@ const metadata = Joi.object().keys({
 }).required()
 
 const eventDescriptor = Joi.object().keys({
-  publisher: Joi.binary().required(),
+  publisher: Joi.binary().required().allow(null),
   author: Joi.binary().required(),
   parent: Joi.object().keys({
     '/': Joi.binary().allow(null)

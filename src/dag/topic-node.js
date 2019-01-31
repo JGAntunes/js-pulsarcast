@@ -2,8 +2,10 @@
 
 const bs58 = require('bs58')
 const dagCBOR = require('ipld-dag-cbor')
+const CID = require('cids')
 
-const eventLinkTypes = require('../protobuffers').TopicDescriptor.MetaData.EventLinking
+const config = require('../config')
+const eventLinkTypes = require('../messages/protobuffers').TopicDescriptor.MetaData.EventLinking
 const log = require('../utils/logger')
 const {
   linkUnmarshalling,
@@ -12,22 +14,12 @@ const {
 
 class TopicNode {
   constructor (name, author, options = {}) {
-    log.trace(`New topic node ${name}`)
-
     this.name = name
     this.author = author
     this.subTopics = options.subTopics
     this.parent = options.parent
 
-    if (options.metadata) {
-      this.metadata = options.metadata
-    }
-
-    // By default only author publishes
-    if (!options.allowedPublishers) {
-      options.allowedPublishers = [author]
-    }
-    this.metadata = createMetadata(options)
+    this.metadata = createMetadata(options.metadata)
 
     log.trace('New topic node %j', {
       name,
@@ -38,6 +30,7 @@ class TopicNode {
   }
 
   static deserialize (topic) {
+    log.debug('TOOOOPIC %j', topic)
     const author = bs58.encode(topic.author)
     const parent = linkUnmarshalling(topic.parent)
     // TODO handle sub topic serialization
@@ -45,7 +38,7 @@ class TopicNode {
 
     return new TopicNode(topic.name, author, {
       subTopics,
-      parent,
+      parent: CID.isCID(parent) ? parent : null,
       metadata: deserializeMetadata(topic.metadata)
     })
   }
@@ -62,13 +55,21 @@ class TopicNode {
   }
 
   serialize () {
+    log.debug('%j', {
+      name: this.name,
+      author: bs58.decode(this.author),
+      parent: linkMarshalling(this.parent),
+      // TODO handle sub topic serialization
+      '#': this.subTopics || {},
+      metadata: serializeMetadata(this.metadata)
+    })
     return {
       name: this.name,
       author: bs58.decode(this.author),
       parent: linkMarshalling(this.parent),
       // TODO handle sub topic serialization
       '#': this.subTopics || {},
-      metadata:  serializeMetadata(this.metadata)
+      metadata: serializeMetadata(this.metadata)
     }
   }
 
@@ -78,59 +79,62 @@ class TopicNode {
   }
 }
 
-function serializeMetadata(metadata) {
-  const allowedPublishers = metadata.allowedPublishers
-    ? {
-        enabled: true,
-        peers: metadata.allowedPublishers.map((peer) => bs58.decode(peer))
-      }
-    : {enabled: false, peers: []}
+function serializeMetadata (metadata) {
+  const allowedPublishers = {enabled: false, peers: []}
+  if (metadata.allowedPublishers) {
+    allowedPublishers.enabled = true
+    allowedPublishers.peers = metadata.allowedPublishers.map((peer) => bs58.decode(peer))
+  }
 
-  const requestToPublish = metadata.requestToPublish
-    ? {
-        enabled: true,
-        peers: metadata.requestToPublish.map((peer) => bs58.decode(peer))
-      }
-    : {enabled: false, peers: []}
+  const requestToPublish = {enabled: false, peers: []}
+  if (metadata.requestToPublish) {
+    requestToPublish.enabled = true
+    requestToPublish.peers = Array.isArray(metadata.requestToPublish)
+      ? metadata.requestToPublish.map((peer) => bs58.decode(peer))
+      : []
+  }
 
   return {
     ...metadata,
+    created: metadata.created.toISOString(),
     allowedPublishers,
     eventLinking: eventLinkTypes[metadata.eventLinking],
     requestToPublish
   }
 }
 
-function deserializeMetadata(metadata) {
+function deserializeMetadata (metadata) {
   const allowedPublishers = metadata.allowedPublishers.enabled
-    : metadata.allowedPublishers.peers.map((peer) => bs58.encode(peer))
-    ? false
-  const requestToPublish = metadata.requestToPublish.enabled
-    : metadata.requestToPublish.peers.map((peer) => bs58.encode(peer))
-    ? false
+    ? metadata.allowedPublishers.peers.map((peer) => bs58.encode(peer))
+    : false
+
+  let requestToPublish
+  if (!metadata.requestToPublish.enabled) requestToPublish = false
+  if (metadata.requestToPublish.enabled && !metadata.requestToPublish.peers.length) requestToPublish = true
+  else requestToPublish = metadata.requestToPublish.peers.map((peer) => bs58.encode(peer))
 
   return {
     ...metadata,
     allowedPublishers,
     eventLinking: Object.entries(eventLinkTypes).find(([type, value]) => {
-      return value === message.eventLinking
+      return value === metadata.eventLinking
     })[0],
     requestToPublish
   }
 }
 
-
 function createMetadata ({
-  allowedPublishers,
+  allowedPublishers = false,
   requestToPublish = true,
-  eventLinking = 'LAST_SEEN'}) {
-
-  const now = new Date()
+  eventLinking = 'LAST_SEEN',
+  created = new Date(),
+  protocolVersion = config.protocol
+} = {}) {
   return {
-    protocolVersion: config.protocol,
-    created: now.toISOString()
+    protocolVersion,
+    created: new Date(created),
     allowedPublishers,
-    requestToPublish, 
+    requestToPublish,
     eventLinking
   }
 }

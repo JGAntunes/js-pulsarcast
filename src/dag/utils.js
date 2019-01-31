@@ -21,6 +21,5 @@ function linkUnmarshalling (link) {
 
 module.exports = {
   linkUnmarshalling,
-  linkMarshalling,
-  createMetadata
+  linkMarshalling
 }

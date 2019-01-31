@@ -25,7 +25,7 @@ message TopicDescriptor {
 
     message PublishersList {
       optional bool enabled = 1;
-      optional repeated bytes publishers = 2;
+      repeated bytes publishers = 2;
     }
 
     optional string created = 1;
@@ -43,10 +43,10 @@ message EventDescriptor {
     optional string protocolVersion = 2;
   }
 
-  optional bytes publisher = 1;
-  optional bytes author = 2;
-  optional Link topic = 3;
-  optional bytes payload = 4;
+  optional bytes author = 1;
+  optional Link topic = 2;
+  optional bytes payload = 3;
+  optional bytes publisher = 4;
   optional Link parent = 5;
   optional MetaData metadata = 6;
 }

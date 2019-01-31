@@ -2,6 +2,7 @@
 
 const { parallel, waterfall } = require('async')
 
+const EventTree = require('../dag/event-tree')
 const { createRPC, marshalling, protobuffers } = require('../messages')
 const log = require('../utils/logger')
 
@@ -26,35 +27,39 @@ function createRPCHandlers (pulsarcastNode) {
     const {me} = pulsarcastNode
     const meB58Str = me.info.id.toB58String()
 
-    topicNode.getCID((err, topicCID) => {
-      // TODO handle error
-      if (err) {
-        log.error('%j', err)
-      }
+    // Set the publisher
+    eventNode.publisher = meB58Str
 
-      const topicB58Str = topicCID.toBaseEncodedString()
-      // Set the publisher
-      eventNode.publisher = meB58Str
-      const rpc = createRPC.event.publish(eventNode)
-      // RPC message is being created at this node, not just forwardind,
-      // so add it to DHT and propagate it through our whole topic tree
-      if (store) {
+    waterfall([
+      topicNode.getCID.bind(topicNode),
+      (topicCID, cb) => {
+        addEvent(topicCID, topicNode, eventNode, {createLink: store}, cb)
+      },
+      (linkedEvent, cb) => {
+        if (!store) return setImmediate(cb, null, linkedEvent)
+
+        // RPC message is being created at this node, not just forwardind,
+        // so add it to DHT and propagate it through our whole topic tree
         waterfall([
           (cb) => parallel([
-            eventNode.getCID.bind(eventNode),
-            eventNode.serializeCBOR.bind(eventNode)
+            linkedEvent.getCID.bind(linkedEvent),
+            linkedEvent.serializeCBOR.bind(linkedEvent)
           ], cb),
           ([cid, serialized], cb) => {
             log.trace('Storing event %j', {cid: cid.toBaseEncodedString()})
             dht.put(cid.buffer, serialized, cb)
           }
-        ], (err) => {
-          // TODO handle error
-          if (err) {
-            log.error('%j', err)
-          }
-        })
+        ], (err) => cb(err, linkedEvent))
       }
+    ], (err, linkedEvent) => {
+      // TODO handle error
+      if (err) {
+        log.error('%j', err)
+        throw err
+      }
+
+      const topicB58Str = linkedEvent.topicCID.toBaseEncodedString()
+      const rpc = createRPC.event.publish(linkedEvent)
 
       const trees = pulsarcastNode.me.trees.get(topicB58Str)
       // TODO handle publishing to an event we're not subscribed to
@@ -70,19 +75,27 @@ function createRPCHandlers (pulsarcastNode) {
     })
   }
 
-  function requestToPublish (topicB58Str, eventNode, fromIdB58Str) {
+  function requestToPublish (topicNode, eventNode, fromIdB58Str) {
     const rpc = createRPC.event.requestToPublish(eventNode)
 
-    const trees = pulsarcastNode.me.trees.get(topicB58Str)
-    // TODO handle request to an event we're not subscribed to
-    if (!trees) return
-    const { parents, children } = trees
+    topicNode.getCID((err, topicCID) => {
+      // TODO handle error
+      if (err) {
+        log.error('%j', err)
+        throw err
+      }
+      const topicB58Str = topicCID.toBaseEncodedString()
+      const trees = pulsarcastNode.me.trees.get(topicB58Str)
+      // TODO handle request to an event we're not subscribed to
+      if (!trees) return
+      const { parents, children } = trees
 
-    const peers = [...parents, ...children]
-    peers.forEach(peer => {
-      // Don't forward the message back
-      if (peer.info.id.toB58String() === fromIdB58Str) return
-      send(peer, rpc)
+      const peers = [...parents, ...children]
+      peers.forEach(peer => {
+        // Don't forward the message back
+        if (peer.info.id.toB58String() === fromIdB58Str) return
+        send(peer, rpc)
+      })
     })
   }
 
@@ -141,11 +154,42 @@ function createRPCHandlers (pulsarcastNode) {
   function send (peer, rpc) {
     log.trace('Sending rpc %j', {handler: 'out', op: rpc.op, to: peer.info.id.toB58String()})
 
+log.debug('%j', rpc)
     const rpcToSend = marshalling.marshall(rpc)
+log.debug('%j', rpcToSend)
+    if (rpc.event) {
+      log.debug('%s', rpc.event.metadata.created instanceof Date)
+      log.debug('%s', rpcToSend.event.metadata.created instanceof Date)
+    }
     const encodedMessage = RPC.encode({msgs: [rpcToSend]})
 
     peer.sendMessages(encodedMessage)
   }
+
+  // Helper funcs
+  function addEvent (topicCID, topicNode, eventNode, {createLink}, cb) {
+    const topicB58Str = topicCID.toBaseEncodedString()
+    const {eventTrees} = pulsarcastNode
+    let eventTree
+
+    // Add event tree if it does not exist
+    if (eventTrees.has(topicB58Str)) {
+      eventTree = eventTrees.get(topicB58Str)
+    } else {
+      eventTree = new EventTree(topicNode)
+      eventTrees.set(topicB58Str, eventTree)
+    }
+
+    if (createLink) return eventTree.addNew(eventNode, cb)
+    eventTree.add(eventNode, cb)
+  }
+
+  // function getEvent (topicCID, eventCID) {
+  //   const topicB58Str = topicCID.toBaseEncodedString()
+  //   const {eventTrees} = pulsarcastNode
+  //   const eventTree = eventTrees.get(topicB58Str)
+  //   return eventTree.get(eventCID)
+  // }
 }
 
 module.exports = createRPCHandlers

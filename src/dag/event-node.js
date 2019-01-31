@@ -3,6 +3,7 @@
 const assert = require('assert')
 const bs58 = require('bs58')
 const dagCBOR = require('ipld-dag-cbor')
+const CID = require('cids')
 
 const config = require('../config')
 const log = require('../utils/logger')
@@ -12,21 +13,22 @@ const {
 } = require('./utils')
 
 class EventNode {
-  constructor (topicCID, publisher, payload, options = {}) {
+  constructor (topicCID, author, payload, options = {}) {
     // TODO check it is a CID maybe?
     assert(topicCID, 'Need a topicCID object to create an event tree')
 
     this.topicCID = topicCID
-    this.publisher = publisher
-    // Default author is the publisher
-    this.author = options.author || publisher
+    this.author = author
     this.payload = payload
+    this.publisher = options.publisher
     this.parent = options.parent
-    this.metadata = options.metadata || createMetadata()
+
+    this.metadata = createMetadata(options.metadata)
 
     log.trace('New event node %j', {
       topic: topicCID.toBaseEncodedString(),
-      publisher,
+      author,
+      publisher: options.publisher,
       parent: this.parent ? this.parent.toBaseEncodedString() : null,
       metadata: this.metadata
     })
@@ -34,12 +36,14 @@ class EventNode {
 
   static deserialize (event) {
     const topicCID = linkUnmarshalling(event.topic)
-    const publisher = bs58.encode(event.publisher)
+    const publisher = event.publisher ? bs58.encode(event.publisher) : null
+    const author = bs58.encode(event.author)
     const payload = event.payload
     const parent = linkUnmarshalling(event.parent)
 
-    return new EventNode(topicCID, publisher, payload, {
-      parent,
+    return new EventNode(topicCID, author, payload, {
+      publisher,
+      parent: CID.isCID(parent) ? parent : null,
       metadata: event.metadata
     })
   }
@@ -51,6 +55,10 @@ class EventNode {
     })
   }
 
+  get published () {
+    return Boolean(this.publisher)
+  }
+
   getCID (cb) {
     dagCBOR.util.cid(this.serialize(), cb)
   }
@@ -58,10 +66,14 @@ class EventNode {
   serialize () {
     return {
       topic: linkMarshalling(this.topicCID),
-      publisher: bs58.decode(this.publisher),
+      publisher: this.published ? bs58.decode(this.publisher) : null,
+      author: bs58.decode(this.author),
       payload: this.payload,
       parent: linkMarshalling(this.parent),
-      metadata: this.metadata
+      metadata: {
+        ...this.metadata,
+        created: this.metadata.created.toISOString()
+      }
     }
   }
 
@@ -71,11 +83,13 @@ class EventNode {
   }
 }
 
-function createMetadata () {
-  const now = new Date()
+function createMetadata ({
+  created = new Date(),
+  protocolVersion = config.protocol
+} = {}) {
   return {
-    protocolVersion: config.protocol,
-    created: now.toISOString()
+    protocolVersion,
+    created: new Date(created)
   }
 }
 

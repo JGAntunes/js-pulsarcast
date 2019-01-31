@@ -2,7 +2,7 @@
 
 const CID = require('cids')
 
-const { createMetadata } = require('../dag/utils')
+const config = require('../config')
 
 // Update RPC message will handle neighbourhood
 // updates
@@ -56,6 +56,14 @@ function newTopic (topicNode) {
     op: 'NEW_TOPIC',
     topic: topicNode,
     metadata: createMetadata()
+  }
+}
+
+function createMetadata () {
+  const now = new Date()
+  return {
+    protocolVersion: config.protocol,
+    created: now.toISOString()
   }
 }
 
