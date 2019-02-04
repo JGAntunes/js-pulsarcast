@@ -6,7 +6,6 @@ const dagCBOR = require('ipld-dag-cbor')
 const CID = require('cids')
 
 const config = require('../config')
-const log = require('../utils/logger')
 const {
   linkUnmarshalling,
   linkMarshalling
@@ -24,14 +23,6 @@ class EventNode {
     this.parent = options.parent
 
     this.metadata = createMetadata(options.metadata)
-
-    log.trace('New event node %j', {
-      topic: topicCID.toBaseEncodedString(),
-      author,
-      publisher: options.publisher,
-      parent: this.parent ? this.parent.toBaseEncodedString() : null,
-      metadata: this.metadata
-    })
   }
 
   static deserialize (event) {

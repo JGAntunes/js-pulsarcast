@@ -34,7 +34,7 @@ function createRPCHandlers (pulsarcastNode) {
 
     // Publish is from this node so it's a new event
     const newEvent = meB58Str === idB58Str
-    log.debug('Got publish %O', eventNode)
+    log.trace('Got publish %j', eventNode)
 
     getTopicNode(eventNode.topicCID, (err, topicNode) => {
       // TODO handle error
@@ -75,7 +75,7 @@ function createRPCHandlers (pulsarcastNode) {
     const {me} = pulsarcastNode
     const meB58Str = me.info.id.toB58String()
 
-    log.debug('Got request to publish  %O', eventNode)
+    log.trace('Got request to publish  %j', eventNode)
 
     getTopicNode(eventNode.topicCID, (err, topicNode) => {
       // TODO handle error
@@ -101,6 +101,8 @@ function createRPCHandlers (pulsarcastNode) {
     if (!peerTree) return
     const topicCID = peerTree.topicId.toBaseEncodedString()
 
+    log.trace('Got update  %j', peerTree)
+
     const {peers} = pulsarcastNode
     peers.get(idB58Str).updateTree(topicCID, peerTree)
   }
@@ -112,6 +114,8 @@ function createRPCHandlers (pulsarcastNode) {
     // The peer should already be in the list given that
     // we received a message from it
     const child = peers.get(idB58Str)
+
+    log.trace('Got join  %j', topicCID)
 
     getTopicNode(topicCID, (err, topicNode) => {
       // TODO handle error

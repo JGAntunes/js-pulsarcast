@@ -6,7 +6,6 @@ const CID = require('cids')
 
 const config = require('../config')
 const eventLinkTypes = require('../messages/protobuffers').TopicDescriptor.MetaData.EventLinking
-const log = require('../utils/logger')
 const {
   linkUnmarshalling,
   linkMarshalling
@@ -20,17 +19,9 @@ class TopicNode {
     this.parent = options.parent
 
     this.metadata = createMetadata(options.metadata)
-
-    log.trace('New topic node %j', {
-      name,
-      author,
-      parent: this.parent ? this.parent.toBaseEncodedString() : null,
-      metadata: this.metadata
-    })
   }
 
   static deserialize (topic) {
-    log.debug('TOOOOPIC %j', topic)
     const author = bs58.encode(topic.author)
     const parent = linkUnmarshalling(topic.parent)
     // TODO handle sub topic serialization
@@ -55,14 +46,6 @@ class TopicNode {
   }
 
   serialize () {
-    log.debug('%j', {
-      name: this.name,
-      author: bs58.decode(this.author),
-      parent: linkMarshalling(this.parent),
-      // TODO handle sub topic serialization
-      '#': this.subTopics || {},
-      metadata: serializeMetadata(this.metadata)
-    })
     return {
       name: this.name,
       author: bs58.decode(this.author),
