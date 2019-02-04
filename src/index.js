@@ -13,7 +13,6 @@ const { protocol } = require('./config')
 const Peer = require('./peer')
 const CreateRpcHandlers = require('./rpc')
 const EventNode = require('./dag/event-node')
-const EventTree = require('./dag/event-tree')
 const TopicNode = require('./dag/topic-node')
 const TopicTree = require('./dag/topic-tree')
 
@@ -108,27 +107,6 @@ class Pulsarcast extends EventEmitter {
     this.topicTree.add(topicNode, cb)
   }
 
-  _addEvent (topicCID, eventNode, cb) {
-    let eventTree
-    const topicB58Str = topicCID.toBaseEncodedString()
-
-    // Add event tree if it does not exist
-    if (this.eventTrees.has(topicB58Str)) {
-      eventTree = this.eventTrees.get(topicB58Str)
-    } else {
-      eventTree = new EventTree(topicCID)
-      this.eventTrees.set(topicB58Str, eventTree)
-    }
-
-    eventTree.add(eventNode, cb)
-  }
-
-  _getEvent (topicCID, eventCID) {
-    const topicB58Str = topicCID.toBaseEncodedString()
-    const eventTree = this.eventTrees.get(topicB58Str)
-    return eventTree.get(eventCID)
-  }
-
   _onConnection (protocol, conn) {
     conn.getPeerInfo((err, peerInfo) => {
       if (err) {
@@ -203,11 +181,7 @@ class Pulsarcast extends EventEmitter {
     const topicCID = new CID(topicB58Str)
 
     const eventNode = new EventNode(topicCID, this.me.info.id.toB58String(), payload)
-    this._addEvent(topicCID, eventNode, (err, linkedEvent) => {
-      // TODO proper error handling
-      if (err) throw err
-      this.rpc.send.event(topicB58Str, linkedEvent)
-    })
+    this.rpc.receive.event.publish(this.me.info.id.toB58String(), eventNode)
   }
 
   subscribe (topicB58Str) {
@@ -216,8 +190,9 @@ class Pulsarcast extends EventEmitter {
     log.trace('Subscribing to topic %j', {command: 'subscribe', topic: topicB58Str})
 
     this.subscriptions.add(topicB58Str)
+    const topicCID = new CID(topicB58Str)
 
-    this.rpc.send.topic.join(topicB58Str)
+    this.rpc.receive.topic.join(this.me.info.id.toB58String(), topicCID)
   }
 
   unsubscribe (topics) {
@@ -230,7 +205,12 @@ class Pulsarcast extends EventEmitter {
 
     log.trace('Creating topic %j', {command: 'subscribe', topicName})
 
-    const topicNode = new TopicNode(topicName, this.me.info.id.toB58String())
+    const meB58Str = this.me.info.id.toB58String()
+    // By default only author publishes
+    const options = {metadata: {allowedPublishers: [meB58Str]}}
+    //   options.
+    // }
+    const topicNode = new TopicNode(topicName, meB58Str, options)
     this._addTopic(topicNode, (err, linkedTopic) => {
       // TODO proper error handling
       if (err) throw err

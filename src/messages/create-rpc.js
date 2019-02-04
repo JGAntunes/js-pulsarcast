@@ -2,7 +2,7 @@
 
 const CID = require('cids')
 
-const { createMetadata } = require('../dag/utils')
+const config = require('../config')
 
 // Update RPC message will handle neighbourhood
 // updates
@@ -19,9 +19,17 @@ function update (topic, {parents, children}) {
   }
 }
 
-function event (topic, eventNode) {
+function publish (eventNode) {
   return {
-    op: 'EVENT',
+    op: 'PUBLISH_EVENT',
+    metadata: createMetadata(),
+    event: eventNode
+  }
+}
+
+function requestToPublish (eventNode) {
+  return {
+    op: 'REQUEST_TO_PUBLISH',
     metadata: createMetadata(),
     event: eventNode
   }
@@ -51,10 +59,21 @@ function newTopic (topicNode) {
   }
 }
 
+function createMetadata () {
+  const now = new Date()
+  return {
+    protocolVersion: config.protocol,
+    created: now.toISOString()
+  }
+}
+
 // TODO perform response validation
 module.exports = {
   update,
-  event,
+  event: {
+    publish,
+    requestToPublish
+  },
   topic: {
     join: joinTopic,
     leave: leaveTopic,

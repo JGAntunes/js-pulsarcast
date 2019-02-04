@@ -17,8 +17,22 @@ message TopicDescriptor {
   optional MetaData metadata = 4;
 
   message MetaData {
+
+    enum EventLinking {
+      LAST_SEEN = 0;
+      CUSTOM = 1;
+    }
+
+    message PublishersList {
+      optional bool enabled = 1;
+      repeated bytes publishers = 2;
+    }
+
     optional string created = 1;
     optional string protocolVersion = 2;
+    optional PublishersList allowedPublishers = 3;
+    optional PublishersList requestToPublish = 4;
+    optional EventLinking eventLinking = 5;
   }
 }
 
@@ -29,11 +43,12 @@ message EventDescriptor {
     optional string protocolVersion = 2;
   }
 
-  optional bytes publisher = 1;
+  optional bytes author = 1;
   optional Link topic = 2;
   optional bytes payload = 3;
-  optional Link parent = 4;
-  optional MetaData metadata = 5;
+  optional bytes publisher = 4;
+  optional Link parent = 5;
+  optional MetaData metadata = 6;
 }
 
 message PeerTree {
@@ -46,10 +61,11 @@ message RPC {
   enum Operation {
     PING = 0;
     UPDATE = 1;
-    EVENT = 2;
+    PUBLISH_EVENT = 2;
     JOIN_TOPIC = 3;
     LEAVE_TOPIC = 4;
     NEW_TOPIC = 5;
+    REQUEST_TO_PUBLISH = 6;
   }
 
   message Message {
@@ -60,10 +76,10 @@ message RPC {
       PeerTree peerTree = 4;
       bytes topicId = 5;
     }
-    optional MessageMetaData metadata = 6;
+    optional MetaData metadata = 6;
   }
 
-  message MessageMetaData {
+  message MetaData {
     optional string created = 1;
     optional string protocolVersion = 2;
   }

@@ -3,41 +3,38 @@
 const assert = require('assert')
 const bs58 = require('bs58')
 const dagCBOR = require('ipld-dag-cbor')
+const CID = require('cids')
 
-const log = require('../utils/logger')
+const config = require('../config')
 const {
   linkUnmarshalling,
-  createMetadata,
   linkMarshalling
 } = require('./utils')
 
 class EventNode {
-  constructor (topicCID, publisher, payload, options = {}) {
+  constructor (topicCID, author, payload, options = {}) {
     // TODO check it is a CID maybe?
     assert(topicCID, 'Need a topicCID object to create an event tree')
 
     this.topicCID = topicCID
-    this.publisher = publisher
+    this.author = author
     this.payload = payload
+    this.publisher = options.publisher
     this.parent = options.parent
-    this.metadata = options.metadata || createMetadata()
 
-    log.trace('New event node %j', {
-      topic: topicCID.toBaseEncodedString(),
-      publisher,
-      parent: this.parent ? this.parent.toBaseEncodedString() : null,
-      metadata: this.metadata
-    })
+    this.metadata = createMetadata(options.metadata)
   }
 
   static deserialize (event) {
     const topicCID = linkUnmarshalling(event.topic)
-    const publisher = bs58.encode(event.publisher)
+    const publisher = event.publisher ? bs58.encode(event.publisher) : null
+    const author = bs58.encode(event.author)
     const payload = event.payload
     const parent = linkUnmarshalling(event.parent)
 
-    return new EventNode(topicCID, publisher, payload, {
-      parent,
+    return new EventNode(topicCID, author, payload, {
+      publisher,
+      parent: CID.isCID(parent) ? parent : null,
       metadata: event.metadata
     })
   }
@@ -49,6 +46,10 @@ class EventNode {
     })
   }
 
+  get published () {
+    return Boolean(this.publisher)
+  }
+
   getCID (cb) {
     dagCBOR.util.cid(this.serialize(), cb)
   }
@@ -56,16 +57,30 @@ class EventNode {
   serialize () {
     return {
       topic: linkMarshalling(this.topicCID),
-      publisher: bs58.decode(this.publisher),
+      publisher: this.published ? bs58.decode(this.publisher) : null,
+      author: bs58.decode(this.author),
       payload: this.payload,
       parent: linkMarshalling(this.parent),
-      metadata: this.metadata
+      metadata: {
+        ...this.metadata,
+        created: this.metadata.created.toISOString()
+      }
     }
   }
 
   serializeCBOR (cb) {
     const serialized = this.serialize()
     dagCBOR.util.serialize(serialized, cb)
+  }
+}
+
+function createMetadata ({
+  created = new Date(),
+  protocolVersion = config.protocol
+} = {}) {
+  return {
+    protocolVersion,
+    created: new Date(created)
   }
 }
 
