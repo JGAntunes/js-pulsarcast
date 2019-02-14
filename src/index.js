@@ -180,7 +180,7 @@ class Pulsarcast extends EventEmitter {
       : Buffer.from(message, 'utf8')
     const topicCID = new CID(topicB58Str)
 
-    const eventNode = new EventNode(topicCID, this.me.info.id.toB58String(), payload)
+    const eventNode = new EventNode(topicCID, this.me.info.id, payload)
     this.rpc.receive.event.publish(this.me.info.id.toB58String(), eventNode)
   }
 
@@ -205,12 +205,12 @@ class Pulsarcast extends EventEmitter {
 
     log.trace('Creating topic %j', {command: 'subscribe', topicName})
 
-    const meB58Str = this.me.info.id.toB58String()
+    const myId = this.me.info.id
     // By default only author publishes
-    const options = {metadata: {allowedPublishers: [meB58Str]}}
+    const options = {metadata: {allowedPublishers: [myId]}}
     //   options.
     // }
-    const topicNode = new TopicNode(topicName, meB58Str, options)
+    const topicNode = new TopicNode(topicName, myId, options)
     this._addTopic(topicNode, (err, linkedTopic) => {
       // TODO proper error handling
       if (err) throw err

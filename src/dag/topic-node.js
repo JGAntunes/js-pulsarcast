@@ -1,6 +1,6 @@
 'use strict'
 
-const bs58 = require('bs58')
+const PeerId = require('peer-id')
 const dagCBOR = require('ipld-dag-cbor')
 const CID = require('cids')
 
@@ -22,7 +22,7 @@ class TopicNode {
   }
 
   static deserialize (topic) {
-    const author = bs58.encode(topic.author)
+    const author = PeerId.createFromBytes(topic.author)
     const parent = linkUnmarshalling(topic.parent)
     // TODO handle sub topic serialization
     const subTopics = topic['#']
@@ -48,7 +48,7 @@ class TopicNode {
   serialize () {
     return {
       name: this.name,
-      author: bs58.decode(this.author),
+      author: this.author.toBytes(),
       parent: linkMarshalling(this.parent),
       // TODO handle sub topic serialization
       '#': this.subTopics || {},
@@ -66,14 +66,14 @@ function serializeMetadata (metadata) {
   const allowedPublishers = {enabled: false, peers: []}
   if (metadata.allowedPublishers) {
     allowedPublishers.enabled = true
-    allowedPublishers.peers = metadata.allowedPublishers.map((peer) => bs58.decode(peer))
+    allowedPublishers.peers = metadata.allowedPublishers.map((peer) => peer.toBytes())
   }
 
   const requestToPublish = {enabled: false, peers: []}
   if (metadata.requestToPublish) {
     requestToPublish.enabled = true
     requestToPublish.peers = Array.isArray(metadata.requestToPublish)
-      ? metadata.requestToPublish.map((peer) => bs58.decode(peer))
+      ? metadata.requestToPublish.map((peer) => peer.toBytes())
       : []
   }
 
@@ -88,13 +88,13 @@ function serializeMetadata (metadata) {
 
 function deserializeMetadata (metadata) {
   const allowedPublishers = metadata.allowedPublishers.enabled
-    ? metadata.allowedPublishers.peers.map((peer) => bs58.encode(peer))
+    ? metadata.allowedPublishers.peers.map((peer) => PeerId.createFromBytes(peer))
     : false
 
   let requestToPublish
   if (!metadata.requestToPublish.enabled) requestToPublish = false
   if (metadata.requestToPublish.enabled && !metadata.requestToPublish.peers.length) requestToPublish = true
-  else requestToPublish = metadata.requestToPublish.peers.map((peer) => bs58.encode(peer))
+  else requestToPublish = metadata.requestToPublish.peers.map((peer) => PeerId.createFromBytes(peer))
 
   return {
     ...metadata,

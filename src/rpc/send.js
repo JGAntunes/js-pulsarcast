@@ -5,6 +5,7 @@ const { parallel, waterfall } = require('async')
 const EventTree = require('../dag/event-tree')
 const { createRPC, marshalling, protobuffers } = require('../messages')
 const log = require('../utils/logger')
+const { closestPeerToPeer } = require('../utils/dht-helpers')
 
 const RPC = protobuffers.RPC
 
@@ -25,10 +26,10 @@ function createRPCHandlers (pulsarcastNode) {
 
   function publish (topicNode, eventNode, fromIdB58Str, { store } = {}) {
     const {me} = pulsarcastNode
-    const meB58Str = me.info.id.toB58String()
+    const myId = me.info.id
 
     // Set the publisher
-    eventNode.publisher = meB58Str
+    eventNode.publisher = myId
 
     waterfall([
       topicNode.getCID.bind(topicNode),
@@ -46,7 +47,10 @@ function createRPCHandlers (pulsarcastNode) {
             linkedEvent.serializeCBOR.bind(linkedEvent)
           ], cb),
           ([cid, serialized], cb) => {
-            log.trace('Storing event %j', {cid: cid.toBaseEncodedString()})
+            log.trace('Storing event %j', {
+              cid: cid.toBaseEncodedString(),
+              ...linkedEvent
+            })
             dht.put(cid.buffer, serialized, cb)
           }
         ], (err) => cb(err, linkedEvent))
@@ -110,9 +114,11 @@ function createRPCHandlers (pulsarcastNode) {
       }
 
       const rpc = createRPC.topic.join(topicCID)
-      // Get the closest peer to the topic stored locally
-      const closestPeerId = dht.routingTable.closestPeer(topicCID.buffer, 1)
-      pulsarcastNode._getPeer(closestPeerId, (err, peer) => {
+      // Get the closest peer to the topic author stored locally
+      waterfall([
+        closestPeerToPeer.bind(null, dht, topicNode.author),
+        pulsarcastNode._getPeer.bind(pulsarcastNode)
+      ], (err, peer) => {
         // TODO handle error
         if (err) {
           log.error('%j', err)
@@ -131,8 +137,6 @@ function createRPCHandlers (pulsarcastNode) {
 
   // TODO for now only put topic descriptor
   function newTopic (topicNode, options) {
-    // const rpc = createRPC.topic.new(topicNode)
-
     waterfall([
       (cb) => parallel([
         topicNode.getCID.bind(topicNode),

@@ -1,7 +1,7 @@
 'use strict'
 
 const assert = require('assert')
-const bs58 = require('bs58')
+const PeerId = require('peer-id')
 const dagCBOR = require('ipld-dag-cbor')
 const CID = require('cids')
 
@@ -27,8 +27,8 @@ class EventNode {
 
   static deserialize (event) {
     const topicCID = linkUnmarshalling(event.topic)
-    const publisher = event.publisher ? bs58.encode(event.publisher) : null
-    const author = bs58.encode(event.author)
+    const publisher = event.publisher ? PeerId.createFromBytes(event.publisher) : null
+    const author = PeerId.createFromBytes(event.author)
     const payload = event.payload
     const parent = linkUnmarshalling(event.parent)
 
@@ -57,8 +57,8 @@ class EventNode {
   serialize () {
     return {
       topic: linkMarshalling(this.topicCID),
-      publisher: this.published ? bs58.decode(this.publisher) : null,
-      author: bs58.decode(this.author),
+      publisher: this.published ? this.publisher.toBytes() : null,
+      author: this.author.toBytes(),
       payload: this.payload,
       parent: linkMarshalling(this.parent),
       metadata: {
