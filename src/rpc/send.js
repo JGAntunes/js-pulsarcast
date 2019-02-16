@@ -135,7 +135,7 @@ function createRPCHandlers (pulsarcastNode) {
     // TODO
   }
 
-  // TODO for now only put topic descriptor
+  // TODO for now only store topic descriptor
   function newTopic (topicNode, options) {
     waterfall([
       (cb) => parallel([

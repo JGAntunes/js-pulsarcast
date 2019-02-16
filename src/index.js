@@ -5,13 +5,14 @@ const assert = require('assert')
 const lp = require('pull-length-prefixed')
 const pull = require('pull-stream')
 const CID = require('cids')
+const { eachLimit } = require('async')
 
 const log = require('./utils/logger')
 
 const { protobuffers } = require('./messages')
 const { protocol } = require('./config')
+const createRpcHandlers = require('./rpc')
 const Peer = require('./peer')
-const CreateRpcHandlers = require('./rpc')
 const EventNode = require('./dag/event-node')
 const TopicNode = require('./dag/topic-node')
 const TopicTree = require('./dag/topic-tree')
@@ -22,7 +23,6 @@ class Pulsarcast extends EventEmitter {
 
     this.libp2p = libp2p
     this.started = false
-    this.eventLinkHandler = options.eventLinkHandler
 
     /**
      * Map of peers.
@@ -57,7 +57,7 @@ class Pulsarcast extends EventEmitter {
     )
 
     // Create our handlers to receive and send RPC messages
-    this.rpc = CreateRpcHandlers(this)
+    this.rpc = createRpcHandlers(this)
   }
 
   _addPeer (peerInfo, conn) {
@@ -146,6 +146,7 @@ class Pulsarcast extends EventEmitter {
     }
     peer.close(() => {
       log.trace('Closed connection to peer', {peer: idB58Str})
+      this.peers.delete(idB58Str)
     })
   }
 
@@ -166,8 +167,17 @@ class Pulsarcast extends EventEmitter {
     if (!this.started) {
       return setImmediate(() => callback(new Error('not started yet')))
     }
-    // TODO clean up all peer conns
-    setImmediate(() => callback())
+
+    this.libp2p.unhandle(protocol)
+
+    eachLimit(this.peers.values(), 20, (peer, cb) => peer.close(cb), (err) => {
+      if (err) return callback(err)
+
+      log.trace('Stopped')
+      this.peers = new Map()
+      this.started = false
+      callback()
+    })
   }
 
   publish (topicB58Str, message) {
@@ -186,6 +196,11 @@ class Pulsarcast extends EventEmitter {
 
   subscribe (topicB58Str) {
     assert(this.started, 'Pulsarcast is not started')
+
+    if (this.subscriptions.has(topicB58Str)) {
+      log.trace('Already subscribed to topic %j', {command: 'subscribe', topic: topicB58Str})
+      return
+    }
 
     log.trace('Subscribing to topic %j', {command: 'subscribe', topic: topicB58Str})
 
@@ -208,9 +223,9 @@ class Pulsarcast extends EventEmitter {
     const myId = this.me.info.id
     // By default only author publishes
     const options = {metadata: {allowedPublishers: [myId]}}
-    //   options.
-    // }
+
     const topicNode = new TopicNode(topicName, myId, options)
+    // TODO subscribe to topic automatically
     this._addTopic(topicNode, (err, linkedTopic) => {
       // TODO proper error handling
       if (err) throw err
