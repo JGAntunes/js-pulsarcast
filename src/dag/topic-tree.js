@@ -14,7 +14,7 @@ class TopicTree {
       if (err) return cb(err)
 
       this.topicTree.set(topicCID.toBaseEncodedString(), topicNode)
-      return cb(null, topicNode)
+      return cb(null, topicNode, topicCID)
     })
   }
 

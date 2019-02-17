@@ -180,26 +180,35 @@ class Pulsarcast extends EventEmitter {
     })
   }
 
-  publish (topicB58Str, message) {
+  publish (topicB58Str, message, options, callback) {
     assert(this.started, 'Pulsarcast is not started')
+
+    if (!callback) {
+      callback = options
+      options = {}
+    }
 
     log.trace('Publishing message %j', {command: 'publish', topic: topicB58Str})
 
-    const payload = Buffer.isBuffer(message)
-      ? message
-      : Buffer.from(message, 'utf8')
-    const topicCID = new CID(topicB58Str)
+    try {
+      const payload = Buffer.isBuffer(message)
+        ? message
+        : Buffer.from(message, 'utf8')
+      const topicCID = new CID(topicB58Str)
 
-    const eventNode = new EventNode(topicCID, this.me.info.id, payload)
-    this.rpc.receive.event.publish(this.me.info.id.toB58String(), eventNode)
+      const eventNode = new EventNode(topicCID, this.me.info.id, payload)
+      return this.rpc.receive.event.publish(this.me.info.id.toB58String(), eventNode, callback)
+    } catch (e) {
+      setImmediate(callback, e)
+    }
   }
 
-  subscribe (topicB58Str) {
+  subscribe (topicB58Str, callback) {
     assert(this.started, 'Pulsarcast is not started')
 
     if (this.subscriptions.has(topicB58Str)) {
       log.trace('Already subscribed to topic %j', {command: 'subscribe', topic: topicB58Str})
-      return
+      return setImmediate(callback)
     }
 
     log.trace('Subscribing to topic %j', {command: 'subscribe', topic: topicB58Str})
@@ -207,7 +216,7 @@ class Pulsarcast extends EventEmitter {
     this.subscriptions.add(topicB58Str)
     const topicCID = new CID(topicB58Str)
 
-    this.rpc.receive.topic.join(this.me.info.id.toB58String(), topicCID)
+    this.rpc.receive.topic.join(this.me.info.id.toB58String(), topicCID, callback)
   }
 
   unsubscribe (topics) {
@@ -215,22 +224,27 @@ class Pulsarcast extends EventEmitter {
     // if (!this.started) return
   }
 
-  createTopic (topicName, { parent = null } = {}) {
+  createTopic (topicName, options, callback) {
     assert(this.started, 'Pulsarcast is not started')
+
+    if (!callback) {
+      callback = options
+      options = {}
+    }
 
     log.trace('Creating topic %j', {command: 'subscribe', topicName})
 
     const myId = this.me.info.id
     // By default only author publishes
-    const options = {metadata: {allowedPublishers: [myId]}}
+    const topicOptions = {metadata: {allowedPublishers: [myId]}}
 
-    const topicNode = new TopicNode(topicName, myId, options)
+    const topicNode = new TopicNode(topicName, myId, topicOptions)
     // TODO subscribe to topic automatically
-    this._addTopic(topicNode, (err, linkedTopic) => {
-      // TODO proper error handling
-      if (err) throw err
+    this._addTopic(topicNode, (err, linkedTopic, topicCID) => {
+      if (err) return callback(err)
 
-      this.rpc.send.topic.new(linkedTopic)
+      this.subscriptions.add(topicCID.toBaseEncodedString())
+      this.rpc.send.topic.new(linkedTopic, callback)
     })
   }
 }

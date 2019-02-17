@@ -15,8 +15,8 @@ class TopicNode {
   constructor (name, author, options = {}) {
     this.name = name
     this.author = author
-    this.subTopics = options.subTopics
-    this.parent = options.parent
+    this.subTopics = options.subTopics || {}
+    this.parent = options.parent || null
 
     this.metadata = createMetadata(options.metadata)
   }

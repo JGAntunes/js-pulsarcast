@@ -4,7 +4,7 @@
   "description": "A libp2p compatible pubsub module of the pulsarcast system",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Such tests, very wow\"",
+    "test": "mocha --recursive --exit",
     "test:ci": "npm run lint && npm test",
     "lint": "standard .  | snazzy"
   },
@@ -35,7 +35,6 @@
     "ipld-dag-cbor": "^0.13.0",
     "joi": "^13.4.0",
     "joi-browser": "^13.4.0",
-    "libp2p-kad-dht": "^0.14.5",
     "peer-id": "^0.12.2",
     "peer-info": "^0.14.1",
     "protons": "^1.0.1",
@@ -43,6 +42,13 @@
     "pull-stream": "^3.6.9"
   },
   "devDependencies": {
+    "chai": "^4.2.0",
+    "libp2p": "jgantunes/js-libp2p",
+    "libp2p-kad-dht": "jgantunes/js-libp2p-kad-dht",
+    "libp2p-secio": "^0.11.1",
+    "libp2p-spdy": "^0.13.1",
+    "libp2p-tcp": "jgantunes/js-libp2p-tcp",
+    "mocha": "^5.2.0",
     "pre-commit": "^1.2.2",
     "snazzy": "^7.1.1",
     "standard": "^11.0.1"

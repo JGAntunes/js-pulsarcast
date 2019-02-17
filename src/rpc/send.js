@@ -24,9 +24,15 @@ function createRPCHandlers (pulsarcastNode) {
     }
   }
 
-  function publish (topicNode, eventNode, fromIdB58Str, { store } = {}) {
+  function publish (topicNode, eventNode, fromIdB58Str, options, callback) {
+    if (!callback) {
+      callback = options
+      options = {}
+    }
+
     const {me} = pulsarcastNode
     const myId = me.info.id
+    const store = options.store
 
     // Set the publisher
     eventNode.publisher = myId
@@ -56,62 +62,51 @@ function createRPCHandlers (pulsarcastNode) {
         ], (err) => cb(err, linkedEvent))
       }
     ], (err, linkedEvent) => {
-      // TODO handle error
-      if (err) {
-        log.error('%j', err)
-        throw err
-      }
+      if (err) return callback(err)
 
       const topicB58Str = linkedEvent.topicCID.toBaseEncodedString()
       const rpc = createRPC.event.publish(linkedEvent)
 
       const trees = pulsarcastNode.me.trees.get(topicB58Str)
       // TODO handle publishing to an event we're not subscribed to
-      if (!trees) return
+      if (!trees) return callback(null, topicNode, eventNode)
       const { parents, children } = trees
 
       const peers = [...parents, ...children]
       peers.forEach(peer => {
         // Don't forward the message back
-        if (peer.info.id.toB58String() === fromIdB58Str) return
-        send(peer, rpc)
+        if (peer.info.id.toB58String() !== fromIdB58Str) send(peer, rpc)
+        return callback(null, topicNode, eventNode)
       })
     })
   }
 
-  function requestToPublish (topicNode, eventNode, fromIdB58Str) {
+  function requestToPublish (topicNode, eventNode, fromIdB58Str, callback) {
     const rpc = createRPC.event.requestToPublish(eventNode)
 
     topicNode.getCID((err, topicCID) => {
-      // TODO handle error
-      if (err) {
-        log.error('%j', err)
-        throw err
-      }
+      if (err) return callback(err)
+
       const topicB58Str = topicCID.toBaseEncodedString()
       const trees = pulsarcastNode.me.trees.get(topicB58Str)
       // TODO handle request to an event we're not subscribed to
-      if (!trees) return
+      if (!trees) return callback(null, topicNode, eventNode)
       const { parents, children } = trees
 
       const peers = [...parents, ...children]
       peers.forEach(peer => {
         // Don't forward the message back
-        if (peer.info.id.toB58String() === fromIdB58Str) return
-        send(peer, rpc)
+        if (peer.info.id.toB58String() !== fromIdB58Str) send(peer, rpc)
+        return callback(null, topicNode, eventNode)
       })
     })
   }
 
   // Join finds the closest peer to the topic CID
   // and sends the rpc join message
-  function joinTopic (topicNode) {
+  function joinTopic (topicNode, callback) {
     topicNode.getCID((err, topicCID) => {
-      // TODO handle error
-      if (err) {
-        log.error('%j', err)
-        throw err
-      }
+      if (err) return callback(err)
 
       const rpc = createRPC.topic.join(topicCID)
       // Get the closest peer to the topic author stored locally
@@ -119,14 +114,12 @@ function createRPCHandlers (pulsarcastNode) {
         closestPeerToPeer.bind(null, dht, topicNode.author),
         pulsarcastNode._getPeer.bind(pulsarcastNode)
       ], (err, peer) => {
-        // TODO handle error
-        if (err) {
-          log.error('%j', err)
-          throw err
-        }
+        if (err) return callback(err)
         // Add peer to my tree
         pulsarcastNode.me.addParents(topicCID.toBaseEncodedString(), [peer])
         send(peer, rpc)
+
+        callback(null, topicNode)
       })
     })
   }
@@ -136,7 +129,13 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   // TODO for now only store topic descriptor
-  function newTopic (topicNode, options) {
+  function newTopic (topicNode, options, callback) {
+    // check if options exist
+    if (!callback) {
+      callback = options
+      options = {}
+    }
+
     waterfall([
       (cb) => parallel([
         topicNode.getCID.bind(topicNode),
@@ -147,11 +146,8 @@ function createRPCHandlers (pulsarcastNode) {
         dht.put(cid.buffer, serialized, cb)
       }
     ], (err) => {
-      // TODO proper error handling
-      if (err) {
-        log.error('%j', err)
-      }
       log.trace('Topic stored %j', {name: topicNode.name})
+      callback(err, topicNode)
     })
   }
 
