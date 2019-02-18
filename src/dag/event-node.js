@@ -46,7 +46,7 @@ class EventNode {
     })
   }
 
-  get published () {
+  get isPublished () {
     return Boolean(this.publisher)
   }
 
@@ -57,7 +57,7 @@ class EventNode {
   serialize () {
     return {
       topic: linkMarshalling(this.topicCID),
-      publisher: this.published ? this.publisher.toBytes() : null,
+      publisher: this.isPublished ? this.publisher.toBytes() : null,
       author: this.author.toBytes(),
       payload: this.payload,
       parent: linkMarshalling(this.parent),

@@ -32,20 +32,22 @@ function createRPCHandlers (pulsarcastNode) {
 
     const {me} = pulsarcastNode
     const myId = me.info.id
-    const store = options.store
+    const isNewEvent = options.isNewEvent
 
-    // Set the publisher
-    eventNode.publisher = myId
+    if (isNewEvent) {
+      // Set the publisher
+      eventNode.publisher = myId
+    }
 
     waterfall([
       topicNode.getCID.bind(topicNode),
       (topicCID, cb) => {
-        addEvent(topicCID, topicNode, eventNode, {createLink: store}, cb)
+        addEvent(topicCID, topicNode, eventNode, {createLink: isNewEvent}, cb)
       },
       (linkedEvent, cb) => {
-        if (!store) return setImmediate(cb, null, linkedEvent)
+        if (!isNewEvent) return setImmediate(cb, null, linkedEvent)
 
-        // RPC message is being created at this node, not just forwardind,
+        // Publish is being created at this node, not just forwardind,
         // so add it to DHT and propagate it through our whole topic tree
         waterfall([
           (cb) => parallel([
@@ -66,17 +68,21 @@ function createRPCHandlers (pulsarcastNode) {
 
       const topicB58Str = linkedEvent.topicCID.toBaseEncodedString()
       const rpc = createRPC.event.publish(linkedEvent)
-
       const trees = pulsarcastNode.me.trees.get(topicB58Str)
+
+      // We're subscribed to this topic, emit the message
+      if (pulsarcastNode.subscriptions.has(topicB58Str)) {
+        pulsarcastNode.emit(topicB58Str, linkedEvent)
+      }
       // TODO handle publishing to an event we're not subscribed to
-      if (!trees) return callback(null, topicNode, eventNode)
+      if (!trees) return callback(null, topicNode, linkedEvent)
       const { parents, children } = trees
 
       const peers = [...parents, ...children]
       peers.forEach(peer => {
         // Don't forward the message back
         if (peer.info.id.toB58String() !== fromIdB58Str) send(peer, rpc)
-        return callback(null, topicNode, eventNode)
+        return callback(null, topicNode, linkedEvent)
       })
     })
   }

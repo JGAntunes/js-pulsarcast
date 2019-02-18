@@ -28,8 +28,7 @@ function createRPCHandlers (pulsarcastNode) {
   function publish (idB58Str, eventNode, callback) {
     // Only consider the message if we have data
     if (!eventNode) return callback()
-    const {me, subscriptions} = pulsarcastNode
-    const topicB58Str = eventNode.topicCID.toBaseEncodedString()
+    const {me} = pulsarcastNode
     const myId = me.info.id
 
     // Publish is from this node so it's a new event
@@ -47,14 +46,10 @@ function createRPCHandlers (pulsarcastNode) {
       if (newEvent && allowedPublishers && !allowedPublishers.find((peer) => peer.isEqual(myId))) {
         return requestToPublish(myId.toB58String(), eventNode, callback)
       }
-      // We're subscribed to this topic, emit the message
-      if (subscriptions.has(topicB58Str)) {
-        pulsarcastNode.emit(topicB58Str, eventNode)
-      }
 
       // TODO check publisher is allowed
 
-      const options = { store: newEvent }
+      const options = { isNewEvent: newEvent }
       pulsarcastNode.rpc.send.event.publish(topicNode, eventNode, idB58Str, options, callback)
     })
   }
@@ -82,7 +77,7 @@ function createRPCHandlers (pulsarcastNode) {
 
       // Publish if I'm allowed to
       if (!allowedPublishers || allowedPublishers.find((peer) => peer.isEqual(myId))) {
-        return pulsarcastNode.rpc.send.event.publish(topicNode, eventNode, myId.toB58String(), {store: true}, callback)
+        return pulsarcastNode.rpc.send.event.publish(topicNode, eventNode, myId.toB58String(), {isNewEvent: true}, callback)
       }
       // Propagate request to publish
       pulsarcastNode.rpc.send.event.requestToPublish(topicNode, eventNode, idB58Str, callback)

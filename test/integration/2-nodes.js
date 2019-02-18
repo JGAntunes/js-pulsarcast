@@ -8,6 +8,7 @@ const { parallel } = require('async')
 
 const Pulsarcast = require('../../src')
 const TopicNode = require('../../src/dag/topic-node')
+const EventNode = require('../../src/dag/event-node')
 const { createNodes } = require('../utils')
 
 describe('2 nodes', () => {
@@ -54,10 +55,58 @@ describe('2 nodes', () => {
   it('subscribes to the previously created topic', (done) => {
     nodes[1].subscribe(topicCID.toBaseEncodedString(), (err, topicNode) => {
       expect(err).to.not.exist
+      expect(topicNode).to.be.an.instanceof(TopicNode)
       expect(nodes[1].subscriptions.size).to.equal(1)
       expect(nodes[1].subscriptions.has(topicCID.toBaseEncodedString())).to.be.true
       expect(topicNode.serialize()).to.deep.equal(topic.serialize())
       done()
+    })
+  })
+
+  it('publishes a message from the non author node', (done) => {
+    const topicB58Str = topicCID.toBaseEncodedString()
+    const message = 'foobar'
+    // Helper func to run all the expects
+    let doneCount = 0
+    const checkAllDone = () => {
+      doneCount++
+      if (doneCount === 3) done()
+    }
+    let firstEventNode
+    // Event listener
+    const listener = (eventNode) => {
+      // Compare serializes of both events
+      if (!firstEventNode) {
+        firstEventNode = eventNode
+      } else {
+        expect(eventNode.serialize()).to.deep.equal(firstEventNode.serialize())
+      }
+
+      // Must have publisher
+      expect(eventNode.isPublished).to.be.true
+      expect(eventNode.topicCID.equals(topicCID)).to.be.true
+      expect(eventNode.payload.toString()).to.be.equal(message)
+      // Should match subscribed author
+      expect(eventNode.author.isEqual(nodes[1].me.info.id)).to.be.true
+      // Should match topic author
+      expect(eventNode.publisher.isEqual(nodes[0].me.info.id)).to.be.true
+
+      checkAllDone()
+    }
+    // Setup event listeners
+    nodes[1].once(topicB58Str, listener)
+    nodes[0].once(topicB58Str, listener)
+
+    nodes[1].publish(topicB58Str, message, (err, topicNode, eventNode) => {
+      expect(err).to.not.exist
+      expect(eventNode).to.be.an.instanceof(EventNode)
+      expect(topicNode).to.be.an.instanceof(TopicNode)
+      expect(eventNode.topicCID.equals(topicCID)).to.be.true
+      expect(eventNode.payload.toString()).to.be.equal(message)
+      expect(eventNode.author.isEqual(nodes[1].me.info.id)).to.be.true
+      // Should be a request to publish
+      expect(eventNode.isPublished).to.be.false
+      checkAllDone()
     })
   })
 })
