@@ -4,7 +4,7 @@
   "description": "A libp2p compatible pubsub module of the pulsarcast system",
   "main": "src/index.js",
   "scripts": {
-    "test": "mocha --recursive --exit",
+    "test": "nyc --reporter=html --reporter=text mocha --recursive --exit",
     "test:ci": "npm run lint && npm test",
     "lint": "standard .  | snazzy"
   },
@@ -49,6 +49,7 @@
     "libp2p-spdy": "^0.13.1",
     "libp2p-tcp": "jgantunes/js-libp2p-tcp",
     "mocha": "^5.2.0",
+    "nyc": "^13.3.0",
     "pre-commit": "^1.2.2",
     "snazzy": "^7.1.1",
     "standard": "^11.0.1"
