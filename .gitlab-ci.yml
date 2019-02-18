@@ -1,9 +1,18 @@
 stages:
+  - test
   - release
 
 variables:
   IPFS_GIT_REPO: "https://gitlab.com/api/v4/projects/10273306"
 
+test:
+  stage: test
+  image: node:10-alpine
+  tags:
+    - docker
+  script:
+    - npm i
+    - npm run test:ci
 
 # Trigger the js-ipfs project pipeline
 trigger-ipfs-build:
