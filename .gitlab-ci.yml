@@ -10,6 +10,8 @@ test:
   image: node:10-alpine
   tags:
     - docker
+  before_script:
+    - apk --no-cache add git
   script:
     - npm i
     - npm run test:ci
