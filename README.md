@@ -6,7 +6,7 @@
 
 A JS implementation of [Pulsarcast](https://github.com/JGAntunes/pulsarcast)
 
-**Keep in mind that this module is still under heavy constructoin :hammer:**
+**Keep in mind that this module is still under heavy construction :hammer:**
 
 ## Install
 
