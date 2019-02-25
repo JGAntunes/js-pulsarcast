@@ -26,11 +26,11 @@ function createNodes (nodeNumber, callback) {
   mapLimit(maddrs, 10, createNode, (err, nodes) => {
     if (err) return callback(err)
 
-    // Connect nodes
+    // Connect nodes sequentially, essentially creating a ring
     eachOfLimit(nodes, 10, (node, index, cb) => {
       let nextNode = nodes[index + 1]
       // End of node list
-      if (!nextNode) nextNode = nodes[0]
+      if (!nextNode) return cb()
       node.dial(nextNode.peerInfo, cb)
     }, (err) => {
       callback(err, nodes)

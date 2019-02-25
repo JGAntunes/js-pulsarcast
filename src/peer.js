@@ -67,7 +67,7 @@ class Peer extends EventEmitter {
     }
     children.forEach((child) => {
       const exists = tree.children.find((peer) => {
-        return peer.info.id.toB58String() === child.info.id.toB58String()
+        return peer.info.id.isEqual(child.info.id)
       })
       if (!exists) {
         tree.children.push(child)
@@ -83,7 +83,7 @@ class Peer extends EventEmitter {
     }
     parents.forEach((parent) => {
       const exists = tree.parents.find((peer) => {
-        return peer.info.id.toB58String() === parent.info.id.toB58String()
+        return peer.info.id.isEqual(parent.info.id)
       })
       if (!exists) {
         tree.parents.push(parent)

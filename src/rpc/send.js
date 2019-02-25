@@ -45,7 +45,7 @@ function createRPCHandlers (pulsarcastNode) {
         addEvent(topicCID, topicNode, eventNode, {createLink: isNewEvent}, cb)
       },
       (linkedEvent, cb) => {
-        if (!isNewEvent) return setImmediate(cb, null, linkedEvent)
+        if (!isNewEvent) return cb(null, null, linkedEvent)
 
         // Publish is being created at this node, not just forwardind,
         // so add it to DHT and propagate it through our whole topic tree
@@ -54,16 +54,16 @@ function createRPCHandlers (pulsarcastNode) {
             linkedEvent.getCID.bind(linkedEvent),
             linkedEvent.serializeCBOR.bind(linkedEvent)
           ], cb),
-          ([cid, serialized], cb) => {
+          ([eventCID, serialized], cb) => {
             log.trace('Storing event %j', {
-              cid: cid.toBaseEncodedString(),
+              cid: eventCID.toBaseEncodedString(),
               ...linkedEvent
             })
-            dht.put(cid.buffer, serialized, cb)
+            dht.put(eventCID.buffer, serialized, (err) => cb(err, eventCID))
           }
-        ], (err) => cb(err, linkedEvent))
+        ], (err, eventCID) => cb(err, eventCID, linkedEvent))
       }
-    ], (err, linkedEvent) => {
+    ], (err, eventCID, linkedEvent) => {
       if (err) return callback(err)
 
       const topicB58Str = linkedEvent.topicCID.toBaseEncodedString()
@@ -75,14 +75,14 @@ function createRPCHandlers (pulsarcastNode) {
         pulsarcastNode.emit(topicB58Str, linkedEvent)
       }
       // TODO handle publishing to an event we're not subscribed to
-      if (!trees) return callback(null, topicNode, linkedEvent)
+      if (!trees) return callback(null, eventCID, topicNode, linkedEvent)
       const { parents, children } = trees
 
       const peers = [...parents, ...children]
       peers.forEach(peer => {
         // Don't forward the message back
         if (peer.info.id.toB58String() !== fromIdB58Str) send(peer, rpc)
-        return callback(null, topicNode, linkedEvent)
+        return callback(null, eventCID, topicNode, linkedEvent)
       })
     })
   }
@@ -149,11 +149,11 @@ function createRPCHandlers (pulsarcastNode) {
       ], cb),
       ([cid, serialized], cb) => {
         log.trace('Topic created %j', {name: topicNode.name, cid: cid.toBaseEncodedString()})
-        dht.put(cid.buffer, serialized, cb)
+        dht.put(cid.buffer, serialized, (err) => cb(err, cid, topicNode))
       }
-    ], (err) => {
+    ], (err, cid, resultTopic) => {
       log.trace('Topic stored %j', {name: topicNode.name})
-      callback(err, topicNode)
+      callback(err, cid, resultTopic)
     })
   }
 

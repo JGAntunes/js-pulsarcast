@@ -16,6 +16,15 @@ class Node extends libp2p {
     }
 
     const config = {
+      // Disable other discovery mechanisms
+      peerDiscovery: {
+        mdns: {
+          enabled: false
+        },
+        webrtcStar: {
+          enabled: false
+        }
+      },
       EXPERIMENTAL: {
         dht: true
       }

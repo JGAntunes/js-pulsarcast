@@ -44,7 +44,9 @@ function createRPCHandlers (pulsarcastNode) {
 
       // New event published at this node and not allowed to publish
       if (newEvent && allowedPublishers && !allowedPublishers.find((peer) => peer.isEqual(myId))) {
-        return requestToPublish(myId.toB58String(), eventNode, callback)
+        return requestToPublish(myId.toB58String(), eventNode, (err, topicNode, eventNode) => {
+          callback(err, null, topicNode, eventNode)
+        })
       }
 
       // TODO check publisher is allowed
