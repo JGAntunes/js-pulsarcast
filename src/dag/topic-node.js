@@ -1,5 +1,6 @@
 'use strict'
 
+const assert = require('assert')
 const PeerId = require('peer-id')
 const dagCBOR = require('ipld-dag-cbor')
 const CID = require('cids')
@@ -13,6 +14,8 @@ const {
 
 class TopicNode {
   constructor (name, author, options = {}) {
+    assert(author, 'Need an author to create a topic node')
+
     this.name = name
     this.author = author
     this.subTopics = options.subTopics || {}
@@ -39,6 +42,25 @@ class TopicNode {
       if (err) return cb(err)
       cb(null, TopicNode.deserialize(result))
     })
+  }
+
+  getReadableFormat () {
+    const allowedPublishers = Array.isArray(this.metadata.allowedPublishers)
+      ? this.metadata.allowedPublishers.map(p => p.toB58String())
+      : this.metadata.allowedPublishers
+    const requestToPublish = Array.isArray(this.metadata.requestToPublish)
+      ? this.metadata.requestToPublish.map(p => p.toB58String())
+      : this.metadata.requestToPublish
+    return {
+      name: this.name,
+      author: this.author.toB58String(),
+      parent: this.parent && this.parent.toBaseEncodedString(),
+      metadata: {
+        ...this.metadata,
+        allowedPublishers,
+        requestToPublish
+      }
+    }
   }
 
   getCID (cb) {

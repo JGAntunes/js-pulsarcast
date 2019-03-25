@@ -1,11 +1,11 @@
 'use strict'
 
-const { parallel, waterfall } = require('async')
+const { waterfall } = require('async')
 
 const EventTree = require('../dag/event-tree')
 const { createRPC, marshalling, protobuffers } = require('../messages')
 const log = require('../utils/logger')
-const { closestPeerToPeer } = require('../utils/dht-helpers')
+const { closestPeerToPeer, store } = require('../utils/dht-helpers')
 
 const RPC = protobuffers.RPC
 
@@ -49,19 +49,7 @@ function createRPCHandlers (pulsarcastNode) {
 
         // Publish is being created at this node, not just forwardind,
         // so add it to DHT and propagate it through our whole topic tree
-        waterfall([
-          (cb) => parallel([
-            linkedEvent.getCID.bind(linkedEvent),
-            linkedEvent.serializeCBOR.bind(linkedEvent)
-          ], cb),
-          ([eventCID, serialized], cb) => {
-            log.trace('Storing event %j', {
-              cid: eventCID.toBaseEncodedString(),
-              ...linkedEvent
-            })
-            dht.put(eventCID.buffer, serialized, (err) => cb(err, eventCID))
-          }
-        ], (err, eventCID) => cb(err, eventCID, linkedEvent))
+        store(dht, linkedEvent, cb)
       }
     ], (err, eventCID, linkedEvent) => {
       if (err) return callback(err)
@@ -142,19 +130,7 @@ function createRPCHandlers (pulsarcastNode) {
       options = {}
     }
 
-    waterfall([
-      (cb) => parallel([
-        topicNode.getCID.bind(topicNode),
-        topicNode.serializeCBOR.bind(topicNode)
-      ], cb),
-      ([cid, serialized], cb) => {
-        log.trace('Topic created %j', {name: topicNode.name, cid: cid.toBaseEncodedString()})
-        dht.put(cid.buffer, serialized, (err) => cb(err, cid, topicNode))
-      }
-    ], (err, cid, resultTopic) => {
-      log.trace('Topic stored %j', {name: topicNode.name})
-      callback(err, cid, resultTopic)
-    })
+    store(dht, topicNode, callback)
   }
 
   function send (peer, rpc) {

@@ -14,7 +14,9 @@ const {
 class EventNode {
   constructor (topicCID, author, payload, options = {}) {
     // TODO check it is a CID maybe?
-    assert(topicCID, 'Need a topicCID object to create an event tree')
+    assert(topicCID, 'Need a topicCID object to create an event node')
+    assert(author, 'Need an author to create an event node')
+    assert(payload, 'Need a payload to create an event node')
 
     this.topicCID = topicCID
     this.author = author
@@ -48,6 +50,18 @@ class EventNode {
 
   get isPublished () {
     return Boolean(this.publisher)
+  }
+
+  getReadableFormat () {
+    return {
+      topicCID: this.topicCID.toBaseEncodedString(),
+      author: this.author.toB58String(),
+      payload: this.payload,
+      publisher: this.publisher && this.publisher.toB58String(),
+      parent: this.parent && this.parent.toBaseEncodedString(),
+      isPublished: this.isPublished,
+      metadata: this.metadata
+    }
   }
 
   getCID (cb) {
