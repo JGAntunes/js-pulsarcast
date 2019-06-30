@@ -5,6 +5,8 @@ const { parallel, waterfall } = require('async')
 const { convertPeerId } = require('libp2p-kad-dht/src/utils')
 
 const log = require('./logger')
+const TopicNode = require('../dag/topic-node')
+const EventNode = require('../dag/event-node')
 
 function closestPeerToPeer (dht, peerId, cb) {
   convertPeerId(peerId, (err, key) => {
@@ -30,7 +32,23 @@ function store (dht, dagNode, cb) {
   ], (err, cid) => cb(err, cid, dagNode))
 }
 
+function getTopic (dht, topicCID, cb) {
+  waterfall([
+    dht.get.bind(dht, topicCID.buffer, null),
+    TopicNode.deserializeCBOR
+  ], cb)
+}
+
+function getEvent (dht, eventCID, cb) {
+  waterfall([
+    dht.get.bind(dht, eventCID.buffer, null),
+    EventNode.deserializeCBOR
+  ], cb)
+}
+
 module.exports = {
   closestPeerToPeer,
-  store
+  store,
+  getTopic,
+  getEvent
 }

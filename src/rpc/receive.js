@@ -1,10 +1,9 @@
 'use strict'
 
 const Joi = require('joi')
-const { waterfall } = require('async')
 
-const TopicNode = require('../dag/topic-node')
 const log = require('../utils/logger')
+const { getTopic } = require('../utils/dht-helpers')
 const { protobuffers, schemas, marshalling } = require('../messages')
 
 const ops = protobuffers.RPC.Operation
@@ -35,7 +34,7 @@ function createRPCHandlers (pulsarcastNode) {
     const newEvent = myId.toB58String() === idB58Str
     log.trace('Got publish %j', eventNode)
 
-    getTopicNode(eventNode.topicCID, (err, topicNode) => {
+    getTopic(dht, eventNode.topicCID, (err, topicNode) => {
       if (err) return callback(err)
 
       const {
@@ -64,7 +63,7 @@ function createRPCHandlers (pulsarcastNode) {
 
     log.trace('Got request to publish  %j', eventNode)
 
-    getTopicNode(eventNode.topicCID, (err, topicNode) => {
+    getTopic(dht, eventNode.topicCID, (err, topicNode) => {
       if (err) return callback(err)
 
       const {
@@ -107,7 +106,7 @@ function createRPCHandlers (pulsarcastNode) {
 
     log.trace('Got join  %j', topicCID)
 
-    getTopicNode(topicCID, (err, topicNode) => {
+    getTopic(dht, topicCID, (err, topicNode) => {
       if (err) return callback(err)
       // The join command did not originate at this node
       if (idB58Str !== me.info.id.toB58String()) {
@@ -161,14 +160,6 @@ function createRPCHandlers (pulsarcastNode) {
       case ops.LEAVE_TOPIC:
         return leave(idB58Str, jsonMessage, errorHandler)
     }
-  }
-
-  // Helper funcs
-  function getTopicNode (topicCID, cb) {
-    waterfall([
-      dht.get.bind(dht, topicCID.buffer, null),
-      TopicNode.deserializeCBOR
-    ], cb)
   }
 }
 

@@ -8,6 +8,7 @@ const CID = require('cids')
 const { eachLimit } = require('async')
 
 const log = require('./utils/logger')
+const { getTopic } = require('./utils/dht-helpers')
 
 const { protobuffers } = require('./messages')
 const { protocol } = require('./config')
@@ -15,7 +16,6 @@ const createRpcHandlers = require('./rpc')
 const Peer = require('./peer')
 const EventNode = require('./dag/event-node')
 const TopicNode = require('./dag/topic-node')
-const TopicTree = require('./dag/topic-tree')
 
 class Pulsarcast extends EventEmitter {
   constructor (libp2p, options = {}) {
@@ -31,6 +31,8 @@ class Pulsarcast extends EventEmitter {
      */
     this.peers = new Map()
 
+    this.topics = new Map()
+
     /**
      * List of our subscriptions
      * @type {Set<string>}
@@ -39,8 +41,6 @@ class Pulsarcast extends EventEmitter {
 
     // Our event trees
     this.eventTrees = new Map()
-    // Our topic tree
-    this.topicTree = new TopicTree()
 
     // This will store the peer neighbours
     this.me = new Peer(libp2p.peerInfo)
@@ -104,7 +104,27 @@ class Pulsarcast extends EventEmitter {
   }
 
   _addTopic (topicNode, cb) {
-    this.topicTree.add(topicNode, cb)
+    topicNode.getCID((err, topicCID) => {
+      if (err) return cb(err)
+      this.topics.set(topicCID.toBaseEncodedString(), topicNode)
+      cb(null, topicNode, topicCID)
+    })
+  }
+
+  _getTopic (topicCID, cb) {
+    const topicB58Str = topicCID.toBaseEncodedString()
+
+    log.trace('Looking for topic %j', {topic: topicB58Str})
+
+    const topicNode = this.topics.get(topicB58Str)
+    // We have the topic locally
+    if (topicNode) return topicNode
+    // Perform a DHT query for it
+    getTopic(this.libp2p._dht, topicCID, (err, topicNode) => {
+      if (err) return cb(err)
+
+      this._addTopic(topicNode, cb)
+    })
   }
 
   _onConnection (protocol, conn) {
@@ -232,20 +252,31 @@ class Pulsarcast extends EventEmitter {
       options = {}
     }
 
-    log.trace('Creating topic %j', {command: 'subscribe', topicName})
-
     const myId = this.me.info.id
     // By default only author publishes
-    const topicOptions = {metadata: {allowedPublishers: [myId]}}
+    const defaultTopicOptions = {metadata: {allowedPublishers: [myId]}}
+
+    log.trace('Creating topic %j', {command: 'create-topic', topicName})
+
+    // TODO add options from createTopic
+    const topicOptions = {...defaultTopicOptions}
 
     const topicNode = new TopicNode(topicName, myId, topicOptions)
-    // TODO subscribe to topic automatically
+
     this._addTopic(topicNode, (err, linkedTopic, topicCID) => {
       if (err) return callback(err)
 
       this.subscriptions.add(topicCID.toBaseEncodedString())
       this.rpc.send.topic.new(linkedTopic, callback)
     })
+  }
+
+  updateTopic (topicB58Str, options, callback) {
+    assert(this.started, 'Pulsarcast is not started')
+
+    log.trace('Requesting update to topic %j', {command: 'update-topic', topic: topicB58Str})
+
+    // TODO this will be an IPNS update
   }
 }
 

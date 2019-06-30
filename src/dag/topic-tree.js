@@ -1,6 +1,10 @@
 'use strict'
 
 // const log = require('../utils/logger')
+//
+// Topic trees are actually multidimensional, each
+// topic can have new versions of it (childs) and also
+// sub-topics
 
 // TODO right now memory usage grows indefinitely
 class TopicTree {
