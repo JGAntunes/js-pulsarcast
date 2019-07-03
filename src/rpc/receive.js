@@ -1,6 +1,7 @@
 'use strict'
 
 const Joi = require('joi')
+const { eachLimit } = require('async')
 
 const log = require('../utils/logger')
 const { getTopic } = require('../utils/dht-helpers')
@@ -123,8 +124,56 @@ function createRPCHandlers (pulsarcastNode) {
     })
   }
 
-  function leave (idB58Str, message) {
-    // TODO leave logic
+  function leave (idB58Str, topicCID, callback) {
+    const {me, peers} = pulsarcastNode
+    const topicB58Str = topicCID.toBaseEncodedString()
+    const myId = me.info.id
+
+    // The peer should already be in the list given that
+    // we received a message from it
+    const peer = peers.get(idB58Str)
+
+    log.trace('Got leave %j', topicCID)
+
+    getTopic(dht, topicCID, (err, topicNode) => {
+      if (err) return callback(err)
+
+      // The leave command originated at this node
+      if (idB58Str === me.info.id.toB58String()) {
+        // TODO this node is the root node for the topic
+        // For now it isn't possible to unsubscribe
+        if (me.info.id.isEqual(topicNode.author)) return callback()
+
+        // Remove this peer topic tree
+        const tree = me.removeTree(topicB58Str)
+
+        // Got no tree to clean up
+        if (!tree) return callback()
+
+        // Need to forward the leave rpc
+        const peers = tree.children.concat(tree.parents)
+        return eachLimit(peers, 20, (peer, done) => {
+          pulsarcastNode.rpc.send.topic.leave(topicNode, idB58Str, done)
+        }, err => callback(err))
+      }
+
+      // Remove this peer topic tree
+      const tree = me.removeTree(topicB58Str)
+
+      // Got no tree to clean up
+      if (!tree) return callback()
+
+      // Close connection to the peer that sent us the msg
+      // if no other topics are being kept
+      peer.gracefulClose(err => {
+        if (err) return callback(err)
+
+        // If this node is a children, we need to rejoin the topic
+        if (tree.children.find((peer) => peer.isEqual(myId))) {
+          pulsarcastNode.rpc.send.topic.join(topicNode, callback)
+        }
+      })
+    })
   }
 
   function genericHandler (idB58Str, message) {

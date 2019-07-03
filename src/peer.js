@@ -59,6 +59,14 @@ class Peer extends EventEmitter {
     this.trees.set(topic, {parents, children})
   }
 
+  removeTree (topic) {
+    const tree = this.trees.get(topic)
+    if (!tree) return
+
+    this.trees.delete(topic)
+    return tree
+  }
+
   addChildren (topic, children) {
     const tree = this.trees.get(topic)
     if (!tree) {
@@ -103,6 +111,12 @@ class Peer extends EventEmitter {
       this.emit('close')
       callback()
     })
+  }
+
+  // Only close the connection if no other
+  // topic subscriptions are kept by this peer
+  gracefulClose (callback) {
+    if (this.trees.size === 0) this.close(callback)
   }
 }
 

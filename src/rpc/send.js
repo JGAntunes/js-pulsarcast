@@ -118,8 +118,12 @@ function createRPCHandlers (pulsarcastNode) {
     })
   }
 
-  function leaveTopic (topic) {
-    // TODO
+  function leaveTopic (topicNode, fromIdB58Str, callback) {
+    // topicNode.getCID((err, topicCID) => {
+    //   if (err) return callback(err)
+
+    //   const rpc = createRPC.topic.leave(topicCID)
+    // TODO NEXT
   }
 
   // TODO for now only store topic descriptor

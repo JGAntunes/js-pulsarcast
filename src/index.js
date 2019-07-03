@@ -239,9 +239,20 @@ class Pulsarcast extends EventEmitter {
     this.rpc.receive.topic.join(this.me.info.id.toB58String(), topicCID, callback)
   }
 
-  unsubscribe (topics) {
-    // Avoid race conditions, by quietly ignoring unsub when shutdown.
-    // if (!this.started) return
+  unsubscribe (topicB58Str, callback) {
+    assert(this.started, 'Pulsarcast is not started')
+
+    if (!this.subscriptions.has(topicB58Str)) {
+      log.trace('Not subscribed to topic %j', {command: 'unsubscribe', topic: topicB58Str})
+      return setImmediate(callback)
+    }
+
+    log.trace('Unsubscribing from topic %j', {command: 'unsubscribe', topic: topicB58Str})
+
+    this.subscriptions.delete(topicB58Str)
+    const topicCID = new CID(topicB58Str)
+
+    this.rpc.receive.topic.leave(this.me.info.id.toB58String(), topicCID, callback)
   }
 
   createTopic (topicName, options, callback) {
