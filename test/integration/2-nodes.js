@@ -9,7 +9,7 @@ const { parallel } = require('async')
 const Pulsarcast = require('../../src')
 const TopicNode = require('../../src/dag/topic-node')
 const EventNode = require('../../src/dag/event-node')
-const { createNodes } = require('../utils')
+const { eventually, createNodes } = require('../utils')
 
 describe('2 nodes', () => {
   let nodes
@@ -109,6 +109,20 @@ describe('2 nodes', () => {
       expect(eventCID).to.be.null
       expect(eventNode.isPublished).to.be.false
       checkAllDone()
+    })
+  })
+
+  it('unsubscribe from the topic', (done) => {
+    const topicB58Str = topicCID.toBaseEncodedString()
+    nodes[1].unsubscribe(topicB58Str, (err) => {
+      expect(err).to.not.exist
+
+      expect(nodes[1].subscriptions.size).to.equal(0)
+
+      eventually(() => {
+        const topicChildren = nodes[0].me.trees.get(topicB58Str).children
+        expect(topicChildren.find(peer => peer.info.id.isEqual(nodes[1].me.info.id))).to.not.exist
+      }, done)
     })
   })
 })

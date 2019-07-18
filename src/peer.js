@@ -99,6 +99,26 @@ class Peer extends EventEmitter {
     })
   }
 
+  removePeer (topic, peerId) {
+    const tree = this.trees.get(topic)
+    const newParents = []
+    const newChildren = []
+    if (!tree) return
+
+    tree.parents.forEach((parent) => {
+      if (parent.info.id.isEqual(peerId)) return
+      newParents.push(parent)
+    })
+
+    tree.children.forEach((child) => {
+      if (child.info.id.isEqual(peerId)) return
+      newChildren.push(child)
+    })
+
+    tree.children = newChildren
+    tree.parents = newParents
+  }
+
   close (callback) {
     // End the pushable
     if (this.stream) {

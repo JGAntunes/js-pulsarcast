@@ -153,23 +153,20 @@ function createRPCHandlers (pulsarcastNode) {
         // Need to forward the leave rpc
         const peers = tree.children.concat(tree.parents)
         return eachLimit(peers, 20, (peer, done) => {
-          pulsarcastNode.rpc.send.topic.leave(topicNode, idB58Str, done)
+          pulsarcastNode.rpc.send.topic.leave(topicNode, peer, done)
         }, err => callback(err))
       }
 
-      // Remove this peer topic tree
-      const tree = me.removeTree(topicB58Str)
-
-      // Got no tree to clean up
-      if (!tree) return callback()
+      // Remove the peer from our tree
+      me.removePeer(topicB58Str, peer.info.id)
 
       // Close connection to the peer that sent us the msg
       // if no other topics are being kept
       peer.gracefulClose(err => {
         if (err) return callback(err)
 
-        // If this node is a children, we need to rejoin the topic
-        if (tree.children.find((peer) => peer.isEqual(myId))) {
+        // If this node is a child, we need to rejoin the topic
+        if (me.trees.get(topicB58Str).children.find((peer) => peer.info.id.isEqual(myId))) {
           pulsarcastNode.rpc.send.topic.join(topicNode, callback)
         }
       })
@@ -207,7 +204,7 @@ function createRPCHandlers (pulsarcastNode) {
       case ops.JOIN_TOPIC:
         return join(idB58Str, jsonMessage.topicId, errorHandler)
       case ops.LEAVE_TOPIC:
-        return leave(idB58Str, jsonMessage, errorHandler)
+        return leave(idB58Str, jsonMessage.topicId, errorHandler)
     }
   }
 }

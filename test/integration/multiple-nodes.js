@@ -8,7 +8,7 @@ const { each } = require('async')
 const Pulsarcast = require('../../src')
 const TopicNode = require('../../src/dag/topic-node')
 const EventNode = require('../../src/dag/event-node')
-const { createNodes } = require('../utils')
+const { eventually, createNodes } = require('../utils')
 
 describe('multiple nodes', function () {
   this.timeout(50000)
@@ -113,6 +113,20 @@ describe('multiple nodes', function () {
       expect(eventNode.isPublished).to.be.false
 
       checkAllDone()
+    })
+  })
+
+  it('unsubscribe from the topic', (done) => {
+    const topicB58Str = topicCID.toBaseEncodedString()
+    nodes[subscriber].unsubscribe(topicB58Str, (err) => {
+      expect(err).to.not.exist
+
+      expect(nodes[subscriber].subscriptions.size).to.equal(0)
+
+      eventually(() => {
+        const topicChildren = nodes[publisher].me.trees.get(topicB58Str).children
+        expect(topicChildren.find(peer => peer.info.id.isEqual(nodes[1].me.info.id))).to.not.exist
+      }, done)
     })
   })
 })

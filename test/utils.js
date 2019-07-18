@@ -38,7 +38,22 @@ function createNodes (nodeNumber, callback) {
   })
 }
 
+function eventually (func, callback) {
+  const polling = setInterval(() => {
+    try {
+      func()
+    } catch (e) {
+      if (e.name === 'AssertionError') return
+      // Rethrow to avoid swallowing errors
+      throw e
+    }
+    clearInterval(polling)
+    callback()
+  }, 100)
+}
+
 module.exports = {
   createNodes,
-  createNode
+  createNode,
+  eventually
 }
