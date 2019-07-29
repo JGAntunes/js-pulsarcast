@@ -5,13 +5,13 @@ const assert = require('assert')
 const lp = require('pull-length-prefixed')
 const pull = require('pull-stream')
 const CID = require('cids')
-const { eachLimit } = require('async')
+const { eachLimit, series } = require('async')
 
 const log = require('./utils/logger')
 const { getTopic } = require('./utils/dht-helpers')
 
 const { protobuffers } = require('./messages')
-const { protocol } = require('./config')
+const { protocol, retryOnClose } = require('./config')
 const createRpcHandlers = require('./rpc')
 const Peer = require('./peer')
 const EventNode = require('./dag/event-node')
@@ -147,7 +147,7 @@ class Pulsarcast extends EventEmitter {
       pull.map((data) => protobuffers.RPC.decode(data)),
       pull.drain(
         (rpc) => this._onRPC(idB58Str, rpc),
-        (err) => this._onConnectionEnd(idB58Str, peer, err)
+        (err) => this._onConnectionEnd(err, idB58Str, peer)
       )
     )
   }
@@ -160,13 +160,69 @@ class Pulsarcast extends EventEmitter {
     rpc.msgs.forEach((msg) => this.rpc.receive.genericHandler(idB58Str, msg))
   }
 
-  _onConnectionEnd (idB58Str, peer, err) {
+  _onConnectionEnd (err, idB58Str, peer) {
     if (err) {
       log.error(`Error from ${idB58Str} %j`, err)
     }
-    peer.close(() => {
-      log.trace('Closed connection to peer', {peer: idB58Str})
-      this.peers.delete(idB58Str)
+    const peerUsedInTopics = []
+    series([
+      // First close the stream and clean connection state
+      (done) => {
+        log.trace('Closing connection to peer', {peer: idB58Str})
+        peer.close(done)
+      },
+      (done) => {
+        // Check if this peer is a parent to any of our topics
+        for (let [topicB58Str, tree] of this.me.trees.entries()) {
+          if (tree.parents.find(parent => parent.info.id.isEqual(peer.info.id))) {
+            peerUsedInTopics.push(topicB58Str)
+          }
+          // Remove every occurrence of this peer in this topic tree
+          this.me.removePeer(topicB58Str, peer.info.id)
+        }
+
+        // Unused peer, move on
+        if (peerUsedInTopics.length === 0) return done()
+
+        // We need it, retry connecting to it
+        this._retryConnection(0, peer, done)
+      }
+    ], (err) => {
+      if (err) {
+        log.error('Connection retry failed', {topics: peerUsedInTopics, peer: peer.info.id.toB58String()})
+        // Delete peer since we couldn't reconnect
+        this.peers.delete(idB58Str)
+        // Connection failed and we depend on it, resubscribe through regular approach
+        if (peerUsedInTopics > 0) {
+          eachLimit(
+            peerUsedInTopics,
+            20,
+            (topicB58Str, done) => this.subscribe(topicB58Str, done),
+            (err) => {
+              if (err) log.error('Parent of topic dropped and subscription failed', {topics: peerUsedInTopics, peer: peer.info.id.toB58String()})
+            }
+          )
+        }
+      }
+
+      // Delete the peer since we no longer need it
+      if (peerUsedInTopics === 0) this.peers.delete(idB58Str)
+    })
+  }
+
+  _retryConnection (attemptNumber, peer, callback) {
+    const idB58Str = peer.info.id.toB58String()
+    // Let's dial to it
+    log.trace('Redialing peer %j', {peer: idB58Str})
+    this.libp2p.dialProtocol(peer.info.id, protocol, (err, conn) => {
+      if (err) {
+        if (attemptNumber < retryOnClose) return this._retryConnection(++attemptNumber, peer, callback)
+        return callback(err)
+      }
+
+      const peerInfo = this.libp2p.peerBook.get(peer.info.id)
+      this._addPeer(peerInfo, conn)
+      callback()
     })
   }
 

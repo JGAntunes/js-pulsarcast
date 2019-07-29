@@ -113,6 +113,8 @@ function createRPCHandlers (pulsarcastNode) {
       if (idB58Str !== me.info.id.toB58String()) {
         // Add this peer as a child to this topic tree
         me.addChildren(topicB58Str, [child])
+        // Add me as a parent to this peer
+        child.addParents(topicB58Str, [me])
         // TODO take care of delivering initial state
         // This node is the root node for the topic
         if (me.info.id.isEqual(topicNode.author)) return callback(null, topicNode)
@@ -159,6 +161,8 @@ function createRPCHandlers (pulsarcastNode) {
 
       // Remove the peer from our tree
       me.removePeer(topicB58Str, peer.info.id)
+      // Remove us from peer's tree
+      peer.removePeer(topicB58Str, me.info.id)
 
       // Close connection to the peer that sent us the msg
       // if no other topics are being kept

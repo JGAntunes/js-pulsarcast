@@ -99,6 +99,7 @@ function createRPCHandlers (pulsarcastNode) {
   // Join finds the closest peer to the topic CID
   // and sends the rpc join message
   function joinTopic (topicNode, callback) {
+    const { me } = pulsarcastNode
     topicNode.getCID((err, topicCID) => {
       if (err) return callback(err)
 
@@ -110,7 +111,9 @@ function createRPCHandlers (pulsarcastNode) {
       ], (err, peer) => {
         if (err) return callback(err)
         // Add peer to my tree
-        pulsarcastNode.me.addParents(topicCID.toBaseEncodedString(), [peer])
+        me.addParents(topicCID.toBaseEncodedString(), [peer])
+        // Add me to peer's tree
+        peer.addChildren(topicCID.toBaseEncodedString(), [me])
         send(peer, rpc)
 
         callback(null, topicNode)
