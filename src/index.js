@@ -177,6 +177,8 @@ class Pulsarcast extends EventEmitter {
           if (tree.parents.find(parent => parent.info.id.isEqual(peer.info.id))) {
             peerUsedInTopics.push(topicB58Str)
           }
+          // Remove every occurrence of this peer in this topic tree
+          this.me.removePeer(topicB58Str, peer.info.id)
         }
 
         // Unused peer, move on

@@ -54,12 +54,19 @@ describe('2 nodes', () => {
   })
 
   it('subscribes to the previously created topic', (done) => {
-    nodes[1].subscribe(topicCID.toBaseEncodedString(), (err, topicNode) => {
+    const topicB58Str = topicCID.toBaseEncodedString()
+
+    nodes[1].subscribe(topicB58Str, (err, topicNode) => {
       expect(err).to.not.exist
       expect(topicNode).to.be.an.instanceof(TopicNode)
       expect(nodes[1].subscriptions.size).to.equal(1)
       expect(nodes[1].subscriptions.has(topicCID.toBaseEncodedString())).to.be.true
       expect(topicNode.serialize()).to.deep.equal(topic.serialize())
+
+      // Check tree
+      const {parents} = nodes[1].me.trees.get(topicB58Str)
+      expect(parents).to.have.lengthOf.above(0)
+      expect(parents[0].trees.get(topicB58Str).children).to.include(nodes[1].me)
       done()
     })
   })

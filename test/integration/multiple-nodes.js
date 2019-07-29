@@ -20,6 +20,7 @@ describe('multiple nodes', function () {
   const nodeNumber = 100
   const publisher = 1
   const subscriber = 80
+  const subscriberNum = 5
 
   before((done) => {
     createNodes(nodeNumber, (err, p2pNodes) => {
@@ -56,15 +57,25 @@ describe('multiple nodes', function () {
     })
   })
 
-  it('subscribes to the previously created topic', (done) => {
-    nodes[subscriber].subscribe(topicCID.toBaseEncodedString(), (err, topicNode) => {
-      expect(err).to.not.exist
-      expect(topicNode).to.be.an.instanceof(TopicNode)
-      expect(nodes[subscriber].subscriptions.size).to.equal(1)
-      expect(nodes[subscriber].subscriptions.has(topicCID.toBaseEncodedString())).to.be.true
-      expect(topicNode.serialize()).to.deep.equal(topic.serialize())
-      done()
-    })
+  it(`subscribes ${subscriberNum} nodes to the created topic`, (done) => {
+    const topicB58Str = topicCID.toBaseEncodedString()
+    const subscriberNodes = nodes.slice(subscriber, subscriberNum + subscriber)
+
+    each(subscriberNodes, (node, cb) => {
+      node.subscribe(topicB58Str, (err, topicNode) => {
+        expect(err).to.not.exist
+        expect(topicNode).to.be.an.instanceof(TopicNode)
+        expect(node.subscriptions.size).to.equal(1)
+        expect(node.subscriptions.has(topicCID.toBaseEncodedString())).to.be.true
+        expect(topicNode.serialize()).to.deep.equal(topic.serialize())
+
+        // Check tree
+        const {parents} = node.me.trees.get(topicB58Str)
+        expect(parents).to.have.lengthOf.above(0)
+        expect(parents[0].trees.get(topicB58Str).children).to.include(node.me)
+        cb()
+      })
+    }, done)
   })
 
   it('publishes a message from the non author node', (done) => {
@@ -126,6 +137,37 @@ describe('multiple nodes', function () {
       eventually(() => {
         const topicChildren = nodes[publisher].me.trees.get(topicB58Str).children
         expect(topicChildren.find(peer => peer.info.id.isEqual(nodes[1].me.info.id))).to.not.exist
+      }, done)
+    })
+  })
+
+  it('dissemination tress are cleaned up on connection close', (done) => {
+    const topicB58Str = topicCID.toBaseEncodedString()
+    const droppingNode = nodes[subscriber + 1]
+    const droppingNodeId = droppingNode.me.info.id.toB58String()
+    const { parents, children } = droppingNode.me.trees.get(topicB58Str)
+
+    // Get the actual nodes
+    const parentNodes = nodes.filter(node => {
+      return parents.find(peer => node.me.info.id.isEqual(peer.info.id))
+    })
+
+    const childrenNodes = nodes.filter(node => {
+      return children.find(peer => node.me.info.id.isEqual(peer.info.id))
+    })
+
+    droppingNode.stop(err => {
+      expect(err).to.not.exist
+
+      eventually(() => {
+        debugger
+        // Check dropping node is not present in any tree
+        childrenNodes.forEach(child => {
+          expect(child.me.trees.get(topicB58Str).parents).to.not.include(child.peers.get(droppingNodeId))
+        })
+        parentNodes.forEach(parent => {
+          expect(parent.me.trees.get(topicB58Str).children).to.not.include(parent.peers.get(droppingNodeId))
+        })
       }, done)
     })
   })
