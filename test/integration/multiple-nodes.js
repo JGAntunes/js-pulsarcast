@@ -160,7 +160,6 @@ describe('multiple nodes', function () {
       expect(err).to.not.exist
 
       eventually(() => {
-        debugger
         // Check dropping node is not present in any tree
         childrenNodes.forEach(child => {
           expect(child.me.trees.get(topicB58Str).parents).to.not.include(child.peers.get(droppingNodeId))

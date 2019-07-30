@@ -25,12 +25,22 @@ class Node extends libp2p {
           enabled: false
         }
       },
+      dht: {
+        kBucketSize: 4,
+        enabledDiscovery: false
+      },
       EXPERIMENTAL: {
         dht: true
       }
     }
 
+    const connectionManager = {
+      // TODO we might need to limit pulsarcast connections
+      // maxPeers: 3
+    }
+
     super({
+      connectionManager,
       modules,
       peerInfo,
       config,
