@@ -53,6 +53,40 @@ describe('2 nodes', () => {
     })
   })
 
+  it('creates a new topic with a parent', (done) => {
+    nodes[0].createTopic('test-2.0', {parent: topicCID.toBaseEncodedString()}, (err, savedCID, childTopicNode) => {
+      expect(err).to.not.exist
+      expect(childTopicNode).to.be.an.instanceof(TopicNode)
+      childTopicNode.parent.equals(topic)
+      childTopicNode.getCID((err, cid) => {
+        expect(err).to.not.exist
+        const topicB58Str = cid.toBaseEncodedString()
+        expect(cid.equals(savedCID)).to.be.true
+        expect(nodes[0].subscriptions.size).to.equal(2)
+        expect(nodes[0].subscriptions.has(topicB58Str)).to.be.true
+        done()
+      })
+    })
+  })
+
+  it('creates a new topic with a subTopic', (done) => {
+    nodes[0].createTopic('test-with-subtopic',
+      {subTopics: {'some-topic': topicCID.toBaseEncodedString()}},
+      (err, savedCID, newTopicNode) => {
+        expect(err).to.not.exist
+        newTopicNode.subTopics['some-topic'].equals(topic)
+        expect(newTopicNode).to.be.an.instanceof(TopicNode)
+        newTopicNode.getCID((err, cid) => {
+          expect(err).to.not.exist
+          const topicB58Str = cid.toBaseEncodedString()
+          expect(cid.equals(savedCID)).to.be.true
+          expect(nodes[0].subscriptions.size).to.equal(3)
+          expect(nodes[0].subscriptions.has(topicB58Str)).to.be.true
+          done()
+        })
+      })
+  })
+
   it('subscribes to the previously created topic', (done) => {
     const topicB58Str = topicCID.toBaseEncodedString()
 

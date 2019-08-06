@@ -13,8 +13,13 @@ const { eventually, createNodes } = require('../utils')
 describe('multiple nodes', function () {
   this.timeout(50000)
   let nodes
+  // Topics
   let topic
   let topicCID
+  let parentTopic
+  let parentTopicCID
+  let subTopic
+  let subTopicCID
 
   // Parameters
   const nodeNumber = 100
@@ -40,21 +45,63 @@ describe('multiple nodes', function () {
     })
   })
 
-  it('creates a topic', (done) => {
-    nodes[publisher].createTopic('test', (err, savedCID, topicNode) => {
+  it('creates a simple parent topic', (done) => {
+    nodes[publisher + 1].createTopic('test-parent', (err, savedCID, topicNode) => {
       expect(err).to.not.exist
       expect(topicNode).to.be.an.instanceof(TopicNode)
       topicNode.getCID((err, cid) => {
         expect(err).to.not.exist
         const topicB58Str = cid.toBaseEncodedString()
         expect(cid.equals(savedCID)).to.be.true
-        expect(nodes[publisher].subscriptions.size).to.equal(1)
-        expect(nodes[publisher].subscriptions.has(topicB58Str)).to.be.true
-        topic = topicNode
-        topicCID = cid
+        expect(nodes[publisher + 1].subscriptions.size).to.equal(1)
+        expect(nodes[publisher + 1].subscriptions.has(topicB58Str)).to.be.true
+        parentTopic = topicNode
+        parentTopicCID = cid
         done()
       })
     })
+  })
+
+  it('creates a simple sub-topic', (done) => {
+    nodes[publisher + 1].createTopic('test-subtopic', (err, savedCID, topicNode) => {
+      expect(err).to.not.exist
+      expect(topicNode).to.be.an.instanceof(TopicNode)
+      topicNode.getCID((err, cid) => {
+        expect(err).to.not.exist
+        const topicB58Str = cid.toBaseEncodedString()
+        expect(cid.equals(savedCID)).to.be.true
+        expect(nodes[publisher + 1].subscriptions.size).to.equal(2)
+        expect(nodes[publisher + 1].subscriptions.has(topicB58Str)).to.be.true
+        subTopic = topicNode
+        subTopicCID = cid
+        done()
+      })
+    })
+  })
+
+  it('creates a new topic with a parent and sub-topic', (done) => {
+    nodes[publisher].createTopic('test-2.0',
+      {
+        parent: parentTopicCID.toBaseEncodedString(),
+        subTopics: {
+          'test-subtopic': subTopicCID.toBaseEncodedString()
+        }
+      }, (err, savedCID, topicNode) => {
+        expect(err).to.not.exist
+        expect(topicNode).to.be.an.instanceof(TopicNode)
+        topicNode.parent.equals(parentTopic)
+        topicNode.subTopics['test-subtopic'].equals(subTopic)
+        topicNode.getCID((err, cid) => {
+          expect(err).to.not.exist
+          const topicB58Str = cid.toBaseEncodedString()
+          expect(cid.equals(savedCID)).to.be.true
+          expect(nodes[publisher].subscriptions.size).to.equal(1)
+          expect(nodes[publisher].subscriptions.has(topicB58Str)).to.be.true
+          topic = topicNode
+          topicCID = cid
+          done()
+        })
+      })
   })
 
   it(`subscribes ${subscriberNum} nodes to the created topic`, (done) => {
@@ -160,7 +207,6 @@ describe('multiple nodes', function () {
       expect(err).to.not.exist
 
       eventually(() => {
-        debugger
         // Check dropping node is not present in any tree
         childrenNodes.forEach(child => {
           expect(child.me.trees.get(topicB58Str).parents).to.not.include(child.peers.get(droppingNodeId))

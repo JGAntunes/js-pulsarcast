@@ -118,7 +118,7 @@ class Pulsarcast extends EventEmitter {
 
     const topicNode = this.topics.get(topicB58Str)
     // We have the topic locally
-    if (topicNode) return topicNode
+    if (topicNode) return cb(null, topicNode)
     // Perform a DHT query for it
     getTopic(this.libp2p._dht, topicCID, (err, topicNode) => {
       if (err) return cb(err)
@@ -320,22 +320,48 @@ class Pulsarcast extends EventEmitter {
     }
 
     const myId = this.me.info.id
-    // By default only author publishes
-    const defaultTopicOptions = {metadata: {allowedPublishers: [myId]}}
+    // By default, no parent, no sub topics, only author publishes
+    const defaultTopicOptions = {
+      subTopics: {},
+      parent: null,
+      metadata: {allowedPublishers: [myId]}
+    }
 
     log.trace('Creating topic %j', {command: 'create-topic', topicName})
 
-    // TODO add options from createTopic
-    const topicOptions = {...defaultTopicOptions}
+    const topicOptions = {...defaultTopicOptions, ...options}
 
-    const topicNode = new TopicNode(topicName, myId, topicOptions)
+    // Topics to check
+    const topicsToLink = []
+    if (topicOptions.parent) {
+      topicsToLink.push(topicOptions.parent)
+    }
+    if (topicOptions.subTopics && topicOptions.subTopics !== {}) {
+      topicsToLink.push(...Object.values(topicOptions.subTopics))
+    }
 
-    this._addTopic(topicNode, (err, linkedTopic, topicCID) => {
-      if (err) return callback(err)
+    series([
+      // Check the existence of parent ans subTopics
+      (cb) => {
+        if (topicsToLink.length === 0) return setImmediate(cb)
+        eachLimit(
+          topicsToLink,
+          20,
+          (topicB58Str, done) => this._getTopic(new CID(topicB58Str), done),
+          cb
+        )
+      },
+      (cb) => {
+        const topicNode = new TopicNode(topicName, myId, topicOptions)
 
-      this.subscriptions.add(topicCID.toBaseEncodedString())
-      this.rpc.send.topic.new(linkedTopic, callback)
-    })
+        this._addTopic(topicNode, (err, linkedTopic, topicCID) => {
+          if (err) return callback(err)
+
+          this.subscriptions.add(topicCID.toBaseEncodedString())
+          this.rpc.send.topic.new(linkedTopic, cb)
+        })
+      }
+    ], (err, [_, [cid, topicNode]]) => callback(err, cid, topicNode))
   }
 
   updateTopic (topicB58Str, options, callback) {
