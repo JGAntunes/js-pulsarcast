@@ -18,8 +18,14 @@ class TopicNode {
 
     this.name = name
     this.author = author
-    this.subTopics = options.subTopics || {}
-    this.parent = options.parent || null
+    this.subTopics = {}
+    // Check both parent and subTopics are CIDs
+    this.parent = options.parent ? new CID(options.parent) : null
+    if (options.subTopics) {
+      this.subTopics = Object.entries(options.subTopics)
+        .map(([name, topicB58Str]) => ({[name]: new CID(topicB58Str)}))
+        .reduce((topics, topic) => ({...topic, ...topics}), {})
+    }
 
     this.metadata = createMetadata(options.metadata)
   }
@@ -27,8 +33,9 @@ class TopicNode {
   static deserialize (topic) {
     const author = PeerId.createFromBytes(topic.author)
     const parent = linkUnmarshalling(topic.parent)
-    // TODO handle sub topic serialization
-    const subTopics = topic['#']
+    const subTopics = Object.entries(topic['#']).map(([name, dagLink]) => {
+      return {[name]: linkUnmarshalling(dagLink)}
+    }).reduce((topics, topic) => ({...topic, ...topics}), {})
 
     return new TopicNode(topic.name, author, {
       subTopics,
@@ -72,8 +79,9 @@ class TopicNode {
       name: this.name,
       author: this.author.toBytes(),
       parent: linkMarshalling(this.parent),
-      // TODO handle sub topic serialization
-      '#': this.subTopics || {},
+      '#': Object.entries(this.subTopics).map(([name, cid]) => {
+        return {[name]: linkMarshalling(cid)}
+      }).reduce((topics, topic) => ({...topic, ...topics}), {}),
       metadata: serializeMetadata(this.metadata)
     }
   }

@@ -15,7 +15,10 @@ function linkMarshalling (link) {
 }
 
 function linkUnmarshalling (link) {
-  // TODO error handling
+  // Link is already a CID
+  // happens when dagcbor utils is used directly
+  if (CID.isCID(link)) return link
+
   return link['/'] ? new CID(link['/']) : {}
 }
 
