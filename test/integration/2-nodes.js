@@ -5,6 +5,7 @@
 const chai = require('chai')
 const expect = chai.expect
 const { parallel } = require('async')
+const CID = require('cids')
 
 const Pulsarcast = require('../../src')
 const TopicNode = require('../../src/dag/topic-node')
@@ -40,11 +41,13 @@ describe('2 nodes', () => {
     nodes[0].createTopic('test', (err, savedCID, topicNode) => {
       expect(err).to.not.exist
       expect(topicNode).to.be.an.instanceof(TopicNode)
+      expect(topicNode.subTopics.meta).to.be.an.instanceof(CID)
       topicNode.getCID((err, cid) => {
         expect(err).to.not.exist
         const topicB58Str = cid.toBaseEncodedString()
         expect(cid.equals(savedCID)).to.be.true
-        expect(nodes[0].subscriptions.size).to.equal(1)
+        // Topic and meta topic
+        expect(nodes[0].subscriptions.size).to.equal(2)
         expect(nodes[0].subscriptions.has(topicB58Str)).to.be.true
         topic = topicNode
         topicCID = cid
@@ -57,12 +60,13 @@ describe('2 nodes', () => {
     nodes[0].createTopic('test-2.0', {parent: topicCID.toBaseEncodedString()}, (err, savedCID, childTopicNode) => {
       expect(err).to.not.exist
       expect(childTopicNode).to.be.an.instanceof(TopicNode)
-      childTopicNode.parent.equals(topic)
+      expect(childTopicNode.subTopics.meta).to.be.an.instanceof(CID)
+      expect(childTopicNode.parent.equals(topicCID)).to.be.true
       childTopicNode.getCID((err, cid) => {
         expect(err).to.not.exist
         const topicB58Str = cid.toBaseEncodedString()
         expect(cid.equals(savedCID)).to.be.true
-        expect(nodes[0].subscriptions.size).to.equal(2)
+        expect(nodes[0].subscriptions.size).to.equal(4)
         expect(nodes[0].subscriptions.has(topicB58Str)).to.be.true
         done()
       })
@@ -74,13 +78,14 @@ describe('2 nodes', () => {
       {subTopics: {'some-topic': topicCID.toBaseEncodedString()}},
       (err, savedCID, newTopicNode) => {
         expect(err).to.not.exist
-        newTopicNode.subTopics['some-topic'].equals(topic)
+        expect(newTopicNode.subTopics['some-topic'].equals(topicCID)).to.be.true
+        expect(newTopicNode.subTopics.meta).to.be.an.instanceof(CID)
         expect(newTopicNode).to.be.an.instanceof(TopicNode)
         newTopicNode.getCID((err, cid) => {
           expect(err).to.not.exist
           const topicB58Str = cid.toBaseEncodedString()
           expect(cid.equals(savedCID)).to.be.true
-          expect(nodes[0].subscriptions.size).to.equal(3)
+          expect(nodes[0].subscriptions.size).to.equal(6)
           expect(nodes[0].subscriptions.has(topicB58Str)).to.be.true
           done()
         })

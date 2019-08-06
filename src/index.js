@@ -5,7 +5,7 @@ const assert = require('assert')
 const lp = require('pull-length-prefixed')
 const pull = require('pull-stream')
 const CID = require('cids')
-const { eachLimit, series } = require('async')
+const { eachLimit, series, waterfall } = require('async')
 
 const log = require('./utils/logger')
 const { getTopic } = require('./utils/dht-helpers')
@@ -340,8 +340,8 @@ class Pulsarcast extends EventEmitter {
       topicsToLink.push(...Object.values(topicOptions.subTopics))
     }
 
-    series([
-      // Check the existence of parent ans subTopics
+    waterfall([
+      // Check the existence of parent and subTopics
       (cb) => {
         if (topicsToLink.length === 0) return setImmediate(cb)
         eachLimit(
@@ -351,17 +351,29 @@ class Pulsarcast extends EventEmitter {
           cb
         )
       },
+      // Setup the meta topic node
       (cb) => {
+        const topicNode = new TopicNode(`meta-${topicName}`, myId, topicOptions)
+
+        this._addTopic(topicNode, (err, linkedTopic, topicCID) => {
+          if (err) return cb(err)
+
+          this.subscriptions.add(topicCID.toBaseEncodedString())
+          cb(null, topicCID)
+        })
+      },
+      (metaCid, cb) => {
+        topicOptions.subTopics.meta = metaCid.toBaseEncodedString()
         const topicNode = new TopicNode(topicName, myId, topicOptions)
 
         this._addTopic(topicNode, (err, linkedTopic, topicCID) => {
-          if (err) return callback(err)
+          if (err) return cb(err)
 
           this.subscriptions.add(topicCID.toBaseEncodedString())
           this.rpc.send.topic.new(linkedTopic, cb)
         })
       }
-    ], (err, [_, [cid, topicNode]]) => callback(err, cid, topicNode))
+    ], (err, cid, topicNode) => callback(err, cid, topicNode))
   }
 
   updateTopic (topicB58Str, options, callback) {

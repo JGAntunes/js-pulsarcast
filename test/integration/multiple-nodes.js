@@ -5,6 +5,8 @@
 const chai = require('chai')
 const expect = chai.expect
 const { each } = require('async')
+const CID = require('cids')
+
 const Pulsarcast = require('../../src')
 const TopicNode = require('../../src/dag/topic-node')
 const EventNode = require('../../src/dag/event-node')
@@ -16,9 +18,7 @@ describe('multiple nodes', function () {
   // Topics
   let topic
   let topicCID
-  let parentTopic
   let parentTopicCID
-  let subTopic
   let subTopicCID
 
   // Parameters
@@ -49,13 +49,14 @@ describe('multiple nodes', function () {
     nodes[publisher + 1].createTopic('test-parent', (err, savedCID, topicNode) => {
       expect(err).to.not.exist
       expect(topicNode).to.be.an.instanceof(TopicNode)
+      expect(topicNode.subTopics.meta).to.be.an.instanceof(CID)
       topicNode.getCID((err, cid) => {
         expect(err).to.not.exist
         const topicB58Str = cid.toBaseEncodedString()
         expect(cid.equals(savedCID)).to.be.true
-        expect(nodes[publisher + 1].subscriptions.size).to.equal(1)
+        // Topic and meta topic
+        expect(nodes[publisher + 1].subscriptions.size).to.equal(2)
         expect(nodes[publisher + 1].subscriptions.has(topicB58Str)).to.be.true
-        parentTopic = topicNode
         parentTopicCID = cid
         done()
       })
@@ -66,13 +67,13 @@ describe('multiple nodes', function () {
     nodes[publisher + 1].createTopic('test-subtopic', (err, savedCID, topicNode) => {
       expect(err).to.not.exist
       expect(topicNode).to.be.an.instanceof(TopicNode)
+      expect(topicNode.subTopics.meta).to.be.an.instanceof(CID)
       topicNode.getCID((err, cid) => {
         expect(err).to.not.exist
         const topicB58Str = cid.toBaseEncodedString()
         expect(cid.equals(savedCID)).to.be.true
-        expect(nodes[publisher + 1].subscriptions.size).to.equal(2)
+        expect(nodes[publisher + 1].subscriptions.size).to.equal(4)
         expect(nodes[publisher + 1].subscriptions.has(topicB58Str)).to.be.true
-        subTopic = topicNode
         subTopicCID = cid
         done()
       })
@@ -89,13 +90,14 @@ describe('multiple nodes', function () {
       }, (err, savedCID, topicNode) => {
         expect(err).to.not.exist
         expect(topicNode).to.be.an.instanceof(TopicNode)
-        topicNode.parent.equals(parentTopic)
-        topicNode.subTopics['test-subtopic'].equals(subTopic)
+        expect(topicNode.subTopics.meta).to.be.an.instanceof(CID)
+        expect(topicNode.parent.equals(parentTopicCID)).to.be.true
+        expect(topicNode.subTopics['test-subtopic'].equals(subTopicCID)).to.be.true
         topicNode.getCID((err, cid) => {
           expect(err).to.not.exist
           const topicB58Str = cid.toBaseEncodedString()
           expect(cid.equals(savedCID)).to.be.true
-          expect(nodes[publisher].subscriptions.size).to.equal(1)
+          expect(nodes[publisher].subscriptions.size).to.equal(2)
           expect(nodes[publisher].subscriptions.has(topicB58Str)).to.be.true
           topic = topicNode
           topicCID = cid
