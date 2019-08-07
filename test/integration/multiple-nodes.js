@@ -12,7 +12,7 @@ const TopicNode = require('../../src/dag/topic-node')
 const EventNode = require('../../src/dag/event-node')
 const { eventually, createNodes } = require('../utils')
 
-describe('multiple nodes', function () {
+describe('multiple nodes', function() {
   this.timeout(50000)
   let nodes
   // Topics
@@ -27,72 +27,85 @@ describe('multiple nodes', function () {
   const subscriber = 80
   const subscriberNum = 5
 
-  before((done) => {
+  before(done => {
     createNodes(nodeNumber, (err, p2pNodes) => {
       expect(err).not.to.exist
-      nodes = p2pNodes.map((node) => new Pulsarcast(node))
+      nodes = p2pNodes.map(node => new Pulsarcast(node))
       done()
     })
   })
 
-  it(`starts ${nodeNumber} nodes`, (done) => {
-    each(nodes, (node, cb) => node.start(cb), (err) => {
-      expect(err).to.not.exist
-      nodes.forEach(node => {
-        expect(node.started).to.be.true
-      })
-      done()
-    })
-  })
-
-  it('creates a simple parent topic', (done) => {
-    nodes[publisher + 1].createTopic('test-parent', (err, savedCID, topicNode) => {
-      expect(err).to.not.exist
-      expect(topicNode).to.be.an.instanceof(TopicNode)
-      expect(topicNode.subTopics.meta).to.be.an.instanceof(CID)
-      topicNode.getCID((err, cid) => {
+  it(`starts ${nodeNumber} nodes`, done => {
+    each(
+      nodes,
+      (node, cb) => node.start(cb),
+      err => {
         expect(err).to.not.exist
-        const topicB58Str = cid.toBaseEncodedString()
-        expect(cid.equals(savedCID)).to.be.true
-        // Topic and meta topic
-        expect(nodes[publisher + 1].subscriptions.size).to.equal(2)
-        expect(nodes[publisher + 1].subscriptions.has(topicB58Str)).to.be.true
-        parentTopicCID = cid
+        nodes.forEach(node => {
+          expect(node.started).to.be.true
+        })
         done()
-      })
-    })
+      }
+    )
   })
 
-  it('creates a simple sub-topic', (done) => {
-    nodes[publisher + 1].createTopic('test-subtopic', (err, savedCID, topicNode) => {
-      expect(err).to.not.exist
-      expect(topicNode).to.be.an.instanceof(TopicNode)
-      expect(topicNode.subTopics.meta).to.be.an.instanceof(CID)
-      topicNode.getCID((err, cid) => {
+  it('creates a simple parent topic', done => {
+    nodes[publisher + 1].createTopic(
+      'test-parent',
+      (err, savedCID, topicNode) => {
         expect(err).to.not.exist
-        const topicB58Str = cid.toBaseEncodedString()
-        expect(cid.equals(savedCID)).to.be.true
-        expect(nodes[publisher + 1].subscriptions.size).to.equal(4)
-        expect(nodes[publisher + 1].subscriptions.has(topicB58Str)).to.be.true
-        subTopicCID = cid
-        done()
-      })
-    })
+        expect(topicNode).to.be.an.instanceof(TopicNode)
+        expect(topicNode.subTopics.meta).to.be.an.instanceof(CID)
+        topicNode.getCID((err, cid) => {
+          expect(err).to.not.exist
+          const topicB58Str = cid.toBaseEncodedString()
+          expect(cid.equals(savedCID)).to.be.true
+          // Topic and meta topic
+          expect(nodes[publisher + 1].subscriptions.size).to.equal(2)
+          expect(nodes[publisher + 1].subscriptions.has(topicB58Str)).to.be.true
+          parentTopicCID = cid
+          done()
+        })
+      }
+    )
   })
 
-  it('creates a new topic with a parent and sub-topic', (done) => {
-    nodes[publisher].createTopic('test-2.0',
+  it('creates a simple sub-topic', done => {
+    nodes[publisher + 1].createTopic(
+      'test-subtopic',
+      (err, savedCID, topicNode) => {
+        expect(err).to.not.exist
+        expect(topicNode).to.be.an.instanceof(TopicNode)
+        expect(topicNode.subTopics.meta).to.be.an.instanceof(CID)
+        topicNode.getCID((err, cid) => {
+          expect(err).to.not.exist
+          const topicB58Str = cid.toBaseEncodedString()
+          expect(cid.equals(savedCID)).to.be.true
+          expect(nodes[publisher + 1].subscriptions.size).to.equal(4)
+          expect(nodes[publisher + 1].subscriptions.has(topicB58Str)).to.be.true
+          subTopicCID = cid
+          done()
+        })
+      }
+    )
+  })
+
+  it('creates a new topic with a parent and sub-topic', done => {
+    nodes[publisher].createTopic(
+      'test-2.0',
       {
         parent: parentTopicCID.toBaseEncodedString(),
         subTopics: {
           'test-subtopic': subTopicCID.toBaseEncodedString()
         }
-      }, (err, savedCID, topicNode) => {
+      },
+      (err, savedCID, topicNode) => {
         expect(err).to.not.exist
         expect(topicNode).to.be.an.instanceof(TopicNode)
         expect(topicNode.subTopics.meta).to.be.an.instanceof(CID)
         expect(topicNode.parent.equals(parentTopicCID)).to.be.true
-        expect(topicNode.subTopics['test-subtopic'].equals(subTopicCID)).to.be.true
+        expect(topicNode.subTopics['test-subtopic'].equals(subTopicCID)).to.be
+          .true
         topicNode.getCID((err, cid) => {
           expect(err).to.not.exist
           const topicB58Str = cid.toBaseEncodedString()
@@ -103,31 +116,37 @@ describe('multiple nodes', function () {
           topicCID = cid
           done()
         })
-      })
+      }
+    )
   })
 
-  it(`subscribes ${subscriberNum} nodes to the created topic`, (done) => {
+  it(`subscribes ${subscriberNum} nodes to the created topic`, done => {
     const topicB58Str = topicCID.toBaseEncodedString()
     const subscriberNodes = nodes.slice(subscriber, subscriberNum + subscriber)
 
-    each(subscriberNodes, (node, cb) => {
-      node.subscribe(topicB58Str, (err, topicNode) => {
-        expect(err).to.not.exist
-        expect(topicNode).to.be.an.instanceof(TopicNode)
-        expect(node.subscriptions.size).to.equal(1)
-        expect(node.subscriptions.has(topicCID.toBaseEncodedString())).to.be.true
-        expect(topicNode.serialize()).to.deep.equal(topic.serialize())
+    each(
+      subscriberNodes,
+      (node, cb) => {
+        node.subscribe(topicB58Str, (err, topicNode) => {
+          expect(err).to.not.exist
+          expect(topicNode).to.be.an.instanceof(TopicNode)
+          expect(node.subscriptions.size).to.equal(1)
+          expect(node.subscriptions.has(topicCID.toBaseEncodedString())).to.be
+            .true
+          expect(topicNode.serialize()).to.deep.equal(topic.serialize())
 
-        // Check tree
-        const {parents} = node.me.trees.get(topicB58Str)
-        expect(parents).to.have.lengthOf.above(0)
-        expect(parents[0].trees.get(topicB58Str).children).to.include(node.me)
-        cb()
-      })
-    }, done)
+          // Check tree
+          const { parents } = node.me.trees.get(topicB58Str)
+          expect(parents).to.have.lengthOf.above(0)
+          expect(parents[0].trees.get(topicB58Str).children).to.include(node.me)
+          cb()
+        })
+      },
+      done
+    )
   })
 
-  it('publishes a message from the non author node', (done) => {
+  it('publishes a message from the non author node', done => {
     const topicB58Str = topicCID.toBaseEncodedString()
     const message = 'foobar'
     // Helper func to run all the expects
@@ -138,7 +157,7 @@ describe('multiple nodes', function () {
     }
     let firstEventNode
     // Event listener
-    const listener = (eventNode) => {
+    const listener = eventNode => {
       // Compare serializes of both events
       if (!firstEventNode) {
         firstEventNode = eventNode
@@ -153,7 +172,8 @@ describe('multiple nodes', function () {
       // Should match subscribed author
       expect(eventNode.author.isEqual(nodes[subscriber].me.info.id)).to.be.true
       // Should match topic author
-      expect(eventNode.publisher.isEqual(nodes[publisher].me.info.id)).to.be.true
+      expect(eventNode.publisher.isEqual(nodes[publisher].me.info.id)).to.be
+        .true
 
       checkAllDone()
     }
@@ -161,36 +181,44 @@ describe('multiple nodes', function () {
     nodes[subscriber].once(topicB58Str, listener)
     nodes[publisher].once(topicB58Str, listener)
 
-    nodes[subscriber].publish(topicB58Str, message, (err, eventCID, topicNode, eventNode) => {
-      expect(err).to.not.exist
-      expect(eventNode).to.be.an.instanceof(EventNode)
-      expect(topicNode).to.be.an.instanceof(TopicNode)
-      expect(eventNode.topicCID.equals(topicCID)).to.be.true
-      expect(eventNode.payload.toString()).to.be.equal(message)
-      expect(eventNode.author.isEqual(nodes[subscriber].me.info.id)).to.be.true
-      // Should be a request to publish
-      expect(eventCID).to.be.null
-      expect(eventNode.isPublished).to.be.false
+    nodes[subscriber].publish(
+      topicB58Str,
+      message,
+      (err, eventCID, topicNode, eventNode) => {
+        expect(err).to.not.exist
+        expect(eventNode).to.be.an.instanceof(EventNode)
+        expect(topicNode).to.be.an.instanceof(TopicNode)
+        expect(eventNode.topicCID.equals(topicCID)).to.be.true
+        expect(eventNode.payload.toString()).to.be.equal(message)
+        expect(eventNode.author.isEqual(nodes[subscriber].me.info.id)).to.be
+          .true
+        // Should be a request to publish
+        expect(eventCID).to.be.null
+        expect(eventNode.isPublished).to.be.false
 
-      checkAllDone()
-    })
+        checkAllDone()
+      }
+    )
   })
 
-  it('unsubscribe from the topic', (done) => {
+  it('unsubscribe from the topic', done => {
     const topicB58Str = topicCID.toBaseEncodedString()
-    nodes[subscriber].unsubscribe(topicB58Str, (err) => {
+    nodes[subscriber].unsubscribe(topicB58Str, err => {
       expect(err).to.not.exist
 
       expect(nodes[subscriber].subscriptions.size).to.equal(0)
 
       eventually(() => {
-        const topicChildren = nodes[publisher].me.trees.get(topicB58Str).children
-        expect(topicChildren.find(peer => peer.info.id.isEqual(nodes[1].me.info.id))).to.not.exist
+        const topicChildren = nodes[publisher].me.trees.get(topicB58Str)
+          .children
+        expect(
+          topicChildren.find(peer => peer.info.id.isEqual(nodes[1].me.info.id))
+        ).to.not.exist
       }, done)
     })
   })
 
-  it('dissemination tress are cleaned up on connection close', (done) => {
+  it('dissemination tress are cleaned up on connection close', done => {
     const topicB58Str = topicCID.toBaseEncodedString()
     const droppingNode = nodes[subscriber + 1]
     const droppingNodeId = droppingNode.me.info.id.toB58String()
@@ -211,10 +239,14 @@ describe('multiple nodes', function () {
       eventually(() => {
         // Check dropping node is not present in any tree
         childrenNodes.forEach(child => {
-          expect(child.me.trees.get(topicB58Str).parents).to.not.include(child.peers.get(droppingNodeId))
+          expect(child.me.trees.get(topicB58Str).parents).to.not.include(
+            child.peers.get(droppingNodeId)
+          )
         })
         parentNodes.forEach(parent => {
-          expect(parent.me.trees.get(topicB58Str).children).to.not.include(parent.peers.get(droppingNodeId))
+          expect(parent.me.trees.get(topicB58Str).children).to.not.include(
+            parent.peers.get(droppingNodeId)
+          )
         })
       }, done)
     })

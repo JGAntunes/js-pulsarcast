@@ -7,7 +7,7 @@ const log = require('../utils/logger')
 // TODO right now memory usage grows indefinitely
 class EventTree {
   // TODO probably need access to the DHT?
-  constructor (topicNode) {
+  constructor(topicNode) {
     // TODO check it is a CID maybe?
     assert(topicNode, 'Need a topicNode object to create an event tree')
     log.trace(`New event tree for topic ${topicNode.name}`)
@@ -21,9 +21,9 @@ class EventTree {
     })
   }
 
-  addNew (eventNode, options, cb) {
+  addNew(eventNode, options, cb) {
     const done = cb || options
-    const {parent} = options
+    const { parent } = options
     const eventLinking = this.topicNode.metadata.eventLinking
 
     if (eventLinking === 'custom' && !parent) {
@@ -31,14 +31,12 @@ class EventTree {
     }
 
     // Set the parent link
-    eventNode.parent = eventLinking === 'custom'
-      ? parent
-      : this.mostRecent
+    eventNode.parent = eventLinking === 'custom' ? parent : this.mostRecent
 
     this.add(eventNode, done)
   }
 
-  add (eventNode, cb) {
+  add(eventNode, cb) {
     eventNode.getCID((err, eventCID) => {
       if (err) return cb(err)
 
@@ -59,14 +57,13 @@ class EventTree {
     })
   }
 
-  get (eventCID) {
+  get(eventCID) {
     return this.eventTree.get(eventCID.toBaseEncodedString())
   }
 
   // TODO to should be optional and could be a CID or a number
   // defaults to 1 level of resolution
-  resolve (fromCID, to) {
-  }
+  resolve(fromCID, to) {}
 }
 
 module.exports = EventTree

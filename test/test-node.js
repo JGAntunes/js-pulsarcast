@@ -7,7 +7,7 @@ const DHT = require('libp2p-kad-dht')
 const libp2p = require('libp2p')
 
 class Node extends libp2p {
-  constructor ({ peerInfo, peerBook }) {
+  constructor({ peerInfo, peerBook }) {
     const modules = {
       transport: [TCP],
       streamMuxer: [spdy],

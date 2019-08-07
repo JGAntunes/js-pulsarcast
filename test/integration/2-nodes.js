@@ -17,27 +17,27 @@ describe('2 nodes', () => {
   let topic
   let topicCID
 
-  before((done) => {
+  before(done => {
     createNodes(2, (err, p2pNodes) => {
       expect(err).not.to.exist
-      nodes = p2pNodes.map((node) => new Pulsarcast(node))
+      nodes = p2pNodes.map(node => new Pulsarcast(node))
       done()
     })
   })
 
-  it('starts both nodes', (done) => {
-    parallel([
-      nodes[0].start.bind(nodes[0]),
-      nodes[1].start.bind(nodes[1])
-    ], (err) => {
-      expect(err).to.not.exist
-      expect(nodes[0].started).to.be.true
-      expect(nodes[1].started).to.be.true
-      done()
-    })
+  it('starts both nodes', done => {
+    parallel(
+      [nodes[0].start.bind(nodes[0]), nodes[1].start.bind(nodes[1])],
+      err => {
+        expect(err).to.not.exist
+        expect(nodes[0].started).to.be.true
+        expect(nodes[1].started).to.be.true
+        done()
+      }
+    )
   })
 
-  it('creates a topic', (done) => {
+  it('creates a topic', done => {
     nodes[0].createTopic('test', (err, savedCID, topicNode) => {
       expect(err).to.not.exist
       expect(topicNode).to.be.an.instanceof(TopicNode)
@@ -56,26 +56,31 @@ describe('2 nodes', () => {
     })
   })
 
-  it('creates a new topic with a parent', (done) => {
-    nodes[0].createTopic('test-2.0', {parent: topicCID.toBaseEncodedString()}, (err, savedCID, childTopicNode) => {
-      expect(err).to.not.exist
-      expect(childTopicNode).to.be.an.instanceof(TopicNode)
-      expect(childTopicNode.subTopics.meta).to.be.an.instanceof(CID)
-      expect(childTopicNode.parent.equals(topicCID)).to.be.true
-      childTopicNode.getCID((err, cid) => {
+  it('creates a new topic with a parent', done => {
+    nodes[0].createTopic(
+      'test-2.0',
+      { parent: topicCID.toBaseEncodedString() },
+      (err, savedCID, childTopicNode) => {
         expect(err).to.not.exist
-        const topicB58Str = cid.toBaseEncodedString()
-        expect(cid.equals(savedCID)).to.be.true
-        expect(nodes[0].subscriptions.size).to.equal(4)
-        expect(nodes[0].subscriptions.has(topicB58Str)).to.be.true
-        done()
-      })
-    })
+        expect(childTopicNode).to.be.an.instanceof(TopicNode)
+        expect(childTopicNode.subTopics.meta).to.be.an.instanceof(CID)
+        expect(childTopicNode.parent.equals(topicCID)).to.be.true
+        childTopicNode.getCID((err, cid) => {
+          expect(err).to.not.exist
+          const topicB58Str = cid.toBaseEncodedString()
+          expect(cid.equals(savedCID)).to.be.true
+          expect(nodes[0].subscriptions.size).to.equal(4)
+          expect(nodes[0].subscriptions.has(topicB58Str)).to.be.true
+          done()
+        })
+      }
+    )
   })
 
-  it('creates a new topic with a subTopic', (done) => {
-    nodes[0].createTopic('test-with-subtopic',
-      {subTopics: {'some-topic': topicCID.toBaseEncodedString()}},
+  it('creates a new topic with a subTopic', done => {
+    nodes[0].createTopic(
+      'test-with-subtopic',
+      { subTopics: { 'some-topic': topicCID.toBaseEncodedString() } },
       (err, savedCID, newTopicNode) => {
         expect(err).to.not.exist
         expect(newTopicNode.subTopics['some-topic'].equals(topicCID)).to.be.true
@@ -89,28 +94,30 @@ describe('2 nodes', () => {
           expect(nodes[0].subscriptions.has(topicB58Str)).to.be.true
           done()
         })
-      })
+      }
+    )
   })
 
-  it('subscribes to the previously created topic', (done) => {
+  it('subscribes to the previously created topic', done => {
     const topicB58Str = topicCID.toBaseEncodedString()
 
     nodes[1].subscribe(topicB58Str, (err, topicNode) => {
       expect(err).to.not.exist
       expect(topicNode).to.be.an.instanceof(TopicNode)
       expect(nodes[1].subscriptions.size).to.equal(1)
-      expect(nodes[1].subscriptions.has(topicCID.toBaseEncodedString())).to.be.true
+      expect(nodes[1].subscriptions.has(topicCID.toBaseEncodedString())).to.be
+        .true
       expect(topicNode.serialize()).to.deep.equal(topic.serialize())
 
       // Check tree
-      const {parents} = nodes[1].me.trees.get(topicB58Str)
+      const { parents } = nodes[1].me.trees.get(topicB58Str)
       expect(parents).to.have.lengthOf.above(0)
       expect(parents[0].trees.get(topicB58Str).children).to.include(nodes[1].me)
       done()
     })
   })
 
-  it('publishes a message from the non author node', (done) => {
+  it('publishes a message from the non author node', done => {
     const topicB58Str = topicCID.toBaseEncodedString()
     const message = 'foobar'
     // Helper func to run all the expects
@@ -121,7 +128,7 @@ describe('2 nodes', () => {
     }
     let firstEventNode
     // Event listener
-    const listener = (eventNode) => {
+    const listener = eventNode => {
       // Compare serializes of both events
       if (!firstEventNode) {
         firstEventNode = eventNode
@@ -144,30 +151,36 @@ describe('2 nodes', () => {
     nodes[1].once(topicB58Str, listener)
     nodes[0].once(topicB58Str, listener)
 
-    nodes[1].publish(topicB58Str, message, (err, eventCID, topicNode, eventNode) => {
-      expect(err).to.not.exist
-      expect(eventNode).to.be.an.instanceof(EventNode)
-      expect(topicNode).to.be.an.instanceof(TopicNode)
-      expect(eventNode.topicCID.equals(topicCID)).to.be.true
-      expect(eventNode.payload.toString()).to.be.equal(message)
-      expect(eventNode.author.isEqual(nodes[1].me.info.id)).to.be.true
-      // Should be a request to publish
-      expect(eventCID).to.be.null
-      expect(eventNode.isPublished).to.be.false
-      checkAllDone()
-    })
+    nodes[1].publish(
+      topicB58Str,
+      message,
+      (err, eventCID, topicNode, eventNode) => {
+        expect(err).to.not.exist
+        expect(eventNode).to.be.an.instanceof(EventNode)
+        expect(topicNode).to.be.an.instanceof(TopicNode)
+        expect(eventNode.topicCID.equals(topicCID)).to.be.true
+        expect(eventNode.payload.toString()).to.be.equal(message)
+        expect(eventNode.author.isEqual(nodes[1].me.info.id)).to.be.true
+        // Should be a request to publish
+        expect(eventCID).to.be.null
+        expect(eventNode.isPublished).to.be.false
+        checkAllDone()
+      }
+    )
   })
 
-  it('unsubscribe from the topic', (done) => {
+  it('unsubscribe from the topic', done => {
     const topicB58Str = topicCID.toBaseEncodedString()
-    nodes[1].unsubscribe(topicB58Str, (err) => {
+    nodes[1].unsubscribe(topicB58Str, err => {
       expect(err).to.not.exist
 
       expect(nodes[1].subscriptions.size).to.equal(0)
 
       eventually(() => {
         const topicChildren = nodes[0].me.trees.get(topicB58Str).children
-        expect(topicChildren.find(peer => peer.info.id.isEqual(nodes[1].me.info.id))).to.not.exist
+        expect(
+          topicChildren.find(peer => peer.info.id.isEqual(nodes[1].me.info.id))
+        ).to.not.exist
       }, done)
     })
   })

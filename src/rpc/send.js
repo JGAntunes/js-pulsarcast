@@ -9,7 +9,7 @@ const { closestPeerToPeer, store } = require('../utils/dht-helpers')
 
 const RPC = protobuffers.RPC
 
-function createRPCHandlers (pulsarcastNode) {
+function createRPCHandlers(pulsarcastNode) {
   const dht = pulsarcastNode.libp2p._dht
 
   return {
@@ -24,13 +24,13 @@ function createRPCHandlers (pulsarcastNode) {
     }
   }
 
-  function publish (topicNode, eventNode, fromIdB58Str, options, callback) {
+  function publish(topicNode, eventNode, fromIdB58Str, options, callback) {
     if (!callback) {
       callback = options
       options = {}
     }
 
-    const {me} = pulsarcastNode
+    const { me } = pulsarcastNode
     const myId = me.info.id
     const isNewEvent = options.isNewEvent
 
@@ -39,43 +39,52 @@ function createRPCHandlers (pulsarcastNode) {
       eventNode.publisher = myId
     }
 
-    waterfall([
-      topicNode.getCID.bind(topicNode),
-      (topicCID, cb) => {
-        addEvent(topicCID, topicNode, eventNode, {createLink: isNewEvent}, cb)
-      },
-      (linkedEvent, cb) => {
-        if (!isNewEvent) return cb(null, null, linkedEvent)
+    waterfall(
+      [
+        topicNode.getCID.bind(topicNode),
+        (topicCID, cb) => {
+          addEvent(
+            topicCID,
+            topicNode,
+            eventNode,
+            { createLink: isNewEvent },
+            cb
+          )
+        },
+        (linkedEvent, cb) => {
+          if (!isNewEvent) return cb(null, null, linkedEvent)
 
-        // Publish is being created at this node, not just forwardind,
-        // so add it to DHT and propagate it through our whole topic tree
-        store(dht, linkedEvent, cb)
+          // Publish is being created at this node, not just forwardind,
+          // so add it to DHT and propagate it through our whole topic tree
+          store(dht, linkedEvent, cb)
+        }
+      ],
+      (err, eventCID, linkedEvent) => {
+        if (err) return callback(err)
+
+        const topicB58Str = linkedEvent.topicCID.toBaseEncodedString()
+        const rpc = createRPC.event.publish(linkedEvent)
+        const trees = pulsarcastNode.me.trees.get(topicB58Str)
+
+        // We're subscribed to this topic, emit the message
+        if (pulsarcastNode.subscriptions.has(topicB58Str)) {
+          pulsarcastNode.emit(topicB58Str, linkedEvent)
+        }
+        // TODO handle publishing to an event we're not subscribed to
+        if (!trees) return callback(null, eventCID, topicNode, linkedEvent)
+        const { parents, children } = trees
+
+        const peers = [...parents, ...children]
+        peers.forEach(peer => {
+          // Don't forward the message back
+          if (peer.info.id.toB58String() !== fromIdB58Str) send(peer, rpc)
+          return callback(null, eventCID, topicNode, linkedEvent)
+        })
       }
-    ], (err, eventCID, linkedEvent) => {
-      if (err) return callback(err)
-
-      const topicB58Str = linkedEvent.topicCID.toBaseEncodedString()
-      const rpc = createRPC.event.publish(linkedEvent)
-      const trees = pulsarcastNode.me.trees.get(topicB58Str)
-
-      // We're subscribed to this topic, emit the message
-      if (pulsarcastNode.subscriptions.has(topicB58Str)) {
-        pulsarcastNode.emit(topicB58Str, linkedEvent)
-      }
-      // TODO handle publishing to an event we're not subscribed to
-      if (!trees) return callback(null, eventCID, topicNode, linkedEvent)
-      const { parents, children } = trees
-
-      const peers = [...parents, ...children]
-      peers.forEach(peer => {
-        // Don't forward the message back
-        if (peer.info.id.toB58String() !== fromIdB58Str) send(peer, rpc)
-        return callback(null, eventCID, topicNode, linkedEvent)
-      })
-    })
+    )
   }
 
-  function requestToPublish (topicNode, eventNode, fromIdB58Str, callback) {
+  function requestToPublish(topicNode, eventNode, fromIdB58Str, callback) {
     const rpc = createRPC.event.requestToPublish(eventNode)
 
     topicNode.getCID((err, topicCID) => {
@@ -98,30 +107,33 @@ function createRPCHandlers (pulsarcastNode) {
 
   // Join finds the closest peer to the topic CID
   // and sends the rpc join message
-  function joinTopic (topicNode, callback) {
+  function joinTopic(topicNode, callback) {
     const { me } = pulsarcastNode
     topicNode.getCID((err, topicCID) => {
       if (err) return callback(err)
 
       const rpc = createRPC.topic.join(topicCID)
       // Get the closest peer to the topic author stored locally
-      waterfall([
-        closestPeerToPeer.bind(null, dht, topicNode.author),
-        pulsarcastNode._getPeer.bind(pulsarcastNode)
-      ], (err, peer) => {
-        if (err) return callback(err)
-        // Add peer to my tree
-        me.addParents(topicCID.toBaseEncodedString(), [peer])
-        // Add me to peer's tree
-        peer.addChildren(topicCID.toBaseEncodedString(), [me])
-        send(peer, rpc)
+      waterfall(
+        [
+          closestPeerToPeer.bind(null, dht, topicNode.author),
+          pulsarcastNode._getPeer.bind(pulsarcastNode)
+        ],
+        (err, peer) => {
+          if (err) return callback(err)
+          // Add peer to my tree
+          me.addParents(topicCID.toBaseEncodedString(), [peer])
+          // Add me to peer's tree
+          peer.addChildren(topicCID.toBaseEncodedString(), [me])
+          send(peer, rpc)
 
-        callback(null, topicNode)
-      })
+          callback(null, topicNode)
+        }
+      )
     })
   }
 
-  function leaveTopic (topicNode, toPeer, callback) {
+  function leaveTopic(topicNode, toPeer, callback) {
     topicNode.getCID((err, topicCID) => {
       if (err) return callback(err)
 
@@ -132,7 +144,7 @@ function createRPCHandlers (pulsarcastNode) {
   }
 
   // TODO for now only store topic descriptor
-  function newTopic (topicNode, options, callback) {
+  function newTopic(topicNode, options, callback) {
     // check if options exist
     if (!callback) {
       callback = options
@@ -142,19 +154,23 @@ function createRPCHandlers (pulsarcastNode) {
     store(dht, topicNode, callback)
   }
 
-  function send (peer, rpc) {
-    log.trace('Sending rpc %j', {handler: 'out', op: rpc.op, to: peer.info.id.toB58String()})
+  function send(peer, rpc) {
+    log.trace('Sending rpc %j', {
+      handler: 'out',
+      op: rpc.op,
+      to: peer.info.id.toB58String()
+    })
 
     const rpcToSend = marshalling.marshall(rpc)
-    const encodedMessage = RPC.encode({msgs: [rpcToSend]})
+    const encodedMessage = RPC.encode({ msgs: [rpcToSend] })
 
     peer.sendMessages(encodedMessage)
   }
 
   // Helper funcs
-  function addEvent (topicCID, topicNode, eventNode, {createLink}, cb) {
+  function addEvent(topicCID, topicNode, eventNode, { createLink }, cb) {
     const topicB58Str = topicCID.toBaseEncodedString()
-    const {eventTrees} = pulsarcastNode
+    const { eventTrees } = pulsarcastNode
     let eventTree
 
     // Add event tree if it does not exist

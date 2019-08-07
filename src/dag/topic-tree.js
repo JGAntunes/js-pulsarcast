@@ -9,11 +9,11 @@
 // TODO right now memory usage grows indefinitely
 class TopicTree {
   // TODO probably need access to the DHT?
-  constructor () {
+  constructor() {
     this.topicTree = new Map()
   }
 
-  add (topicNode, cb) {
+  add(topicNode, cb) {
     topicNode.getCID((err, topicCID) => {
       if (err) return cb(err)
 
@@ -22,14 +22,13 @@ class TopicTree {
     })
   }
 
-  get (topicCID) {
+  get(topicCID) {
     return this.eventTree.get(topicCID.toBaseEncodedString())
   }
 
   // TODO to should be optional and could be a CID or a number
   // defaults to 1 level of resolution
-  resolve (fromCID, to) {
-  }
+  resolve(fromCID, to) {}
 }
 
 module.exports = TopicTree

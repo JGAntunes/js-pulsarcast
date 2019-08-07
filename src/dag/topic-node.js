@@ -6,14 +6,12 @@ const dagCBOR = require('ipld-dag-cbor')
 const CID = require('cids')
 
 const config = require('../config')
-const eventLinkTypes = require('../messages/protobuffers').TopicDescriptor.MetaData.EventLinking
-const {
-  linkUnmarshalling,
-  linkMarshalling
-} = require('./utils')
+const eventLinkTypes = require('../messages/protobuffers').TopicDescriptor
+  .MetaData.EventLinking
+const { linkUnmarshalling, linkMarshalling } = require('./utils')
 
 class TopicNode {
-  constructor (name, author, options = {}) {
+  constructor(name, author, options = {}) {
     assert(author, 'Need an author to create a topic node')
 
     this.name = name
@@ -23,19 +21,21 @@ class TopicNode {
     this.parent = options.parent ? new CID(options.parent) : null
     if (options.subTopics) {
       this.subTopics = Object.entries(options.subTopics)
-        .map(([name, topicB58Str]) => ({[name]: new CID(topicB58Str)}))
-        .reduce((topics, topic) => ({...topic, ...topics}), {})
+        .map(([name, topicB58Str]) => ({ [name]: new CID(topicB58Str) }))
+        .reduce((topics, topic) => ({ ...topic, ...topics }), {})
     }
 
     this.metadata = createMetadata(options.metadata)
   }
 
-  static deserialize (topic) {
+  static deserialize(topic) {
     const author = PeerId.createFromBytes(topic.author)
     const parent = linkUnmarshalling(topic.parent)
-    const subTopics = Object.entries(topic['#']).map(([name, dagLink]) => {
-      return {[name]: linkUnmarshalling(dagLink)}
-    }).reduce((topics, topic) => ({...topic, ...topics}), {})
+    const subTopics = Object.entries(topic['#'])
+      .map(([name, dagLink]) => {
+        return { [name]: linkUnmarshalling(dagLink) }
+      })
+      .reduce((topics, topic) => ({ ...topic, ...topics }), {})
 
     return new TopicNode(topic.name, author, {
       subTopics,
@@ -44,14 +44,14 @@ class TopicNode {
     })
   }
 
-  static deserializeCBOR (topic, cb) {
+  static deserializeCBOR(topic, cb) {
     dagCBOR.util.deserialize(topic, (err, result) => {
       if (err) return cb(err)
       cb(null, TopicNode.deserialize(result))
     })
   }
 
-  getReadableFormat () {
+  getReadableFormat() {
     const allowedPublishers = Array.isArray(this.metadata.allowedPublishers)
       ? this.metadata.allowedPublishers.map(p => p.toB58String())
       : this.metadata.allowedPublishers
@@ -70,40 +70,44 @@ class TopicNode {
     }
   }
 
-  getCID (cb) {
+  getCID(cb) {
     dagCBOR.util.cid(this.serialize(), cb)
   }
 
-  serialize () {
+  serialize() {
     return {
       name: this.name,
       author: this.author.toBytes(),
       parent: linkMarshalling(this.parent),
-      '#': Object.entries(this.subTopics).map(([name, cid]) => {
-        return {[name]: linkMarshalling(cid)}
-      }).reduce((topics, topic) => ({...topic, ...topics}), {}),
+      '#': Object.entries(this.subTopics)
+        .map(([name, cid]) => {
+          return { [name]: linkMarshalling(cid) }
+        })
+        .reduce((topics, topic) => ({ ...topic, ...topics }), {}),
       metadata: serializeMetadata(this.metadata)
     }
   }
 
-  serializeCBOR (cb) {
+  serializeCBOR(cb) {
     const serialized = this.serialize()
     dagCBOR.util.serialize(serialized, cb)
   }
 }
 
-function serializeMetadata (metadata) {
-  const allowedPublishers = {enabled: false, peers: []}
+function serializeMetadata(metadata) {
+  const allowedPublishers = { enabled: false, peers: [] }
   if (metadata.allowedPublishers) {
     allowedPublishers.enabled = true
-    allowedPublishers.peers = metadata.allowedPublishers.map((peer) => peer.toBytes())
+    allowedPublishers.peers = metadata.allowedPublishers.map(peer =>
+      peer.toBytes()
+    )
   }
 
-  const requestToPublish = {enabled: false, peers: []}
+  const requestToPublish = { enabled: false, peers: [] }
   if (metadata.requestToPublish) {
     requestToPublish.enabled = true
     requestToPublish.peers = Array.isArray(metadata.requestToPublish)
-      ? metadata.requestToPublish.map((peer) => peer.toBytes())
+      ? metadata.requestToPublish.map(peer => peer.toBytes())
       : []
   }
 
@@ -116,15 +120,22 @@ function serializeMetadata (metadata) {
   }
 }
 
-function deserializeMetadata (metadata) {
+function deserializeMetadata(metadata) {
   const allowedPublishers = metadata.allowedPublishers.enabled
-    ? metadata.allowedPublishers.peers.map((peer) => PeerId.createFromBytes(peer))
+    ? metadata.allowedPublishers.peers.map(peer => PeerId.createFromBytes(peer))
     : false
 
   let requestToPublish
   if (!metadata.requestToPublish.enabled) requestToPublish = false
-  if (metadata.requestToPublish.enabled && !metadata.requestToPublish.peers.length) requestToPublish = true
-  else requestToPublish = metadata.requestToPublish.peers.map((peer) => PeerId.createFromBytes(peer))
+  if (
+    metadata.requestToPublish.enabled &&
+    !metadata.requestToPublish.peers.length
+  )
+    requestToPublish = true
+  else
+    requestToPublish = metadata.requestToPublish.peers.map(peer =>
+      PeerId.createFromBytes(peer)
+    )
 
   return {
     ...metadata,
@@ -136,7 +147,7 @@ function deserializeMetadata (metadata) {
   }
 }
 
-function createMetadata ({
+function createMetadata({
   allowedPublishers = false,
   requestToPublish = true,
   eventLinking = 'LAST_SEEN',

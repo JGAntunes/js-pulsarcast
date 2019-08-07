@@ -6,7 +6,7 @@ const config = require('../config')
 
 // Update RPC message will handle neighbourhood
 // updates
-function update (topic, {parents, children}) {
+function update(topic, { parents, children }) {
   const metadata = createMetadata()
   return {
     op: 'UPDATE',
@@ -19,7 +19,7 @@ function update (topic, {parents, children}) {
   }
 }
 
-function publish (eventNode) {
+function publish(eventNode) {
   return {
     op: 'PUBLISH_EVENT',
     metadata: createMetadata(),
@@ -27,7 +27,7 @@ function publish (eventNode) {
   }
 }
 
-function requestToPublish (eventNode) {
+function requestToPublish(eventNode) {
   return {
     op: 'REQUEST_TO_PUBLISH',
     metadata: createMetadata(),
@@ -35,7 +35,7 @@ function requestToPublish (eventNode) {
   }
 }
 
-function joinTopic (topic) {
+function joinTopic(topic) {
   return {
     op: 'JOIN_TOPIC',
     topicId: new CID(topic),
@@ -43,7 +43,7 @@ function joinTopic (topic) {
   }
 }
 
-function leaveTopic (topic) {
+function leaveTopic(topic) {
   return {
     op: 'LEAVE_TOPIC',
     topicId: new CID(topic),
@@ -51,7 +51,7 @@ function leaveTopic (topic) {
   }
 }
 
-function newTopic (topicNode) {
+function newTopic(topicNode) {
   return {
     op: 'NEW_TOPIC',
     topic: topicNode,
@@ -59,7 +59,7 @@ function newTopic (topicNode) {
   }
 }
 
-function createMetadata () {
+function createMetadata() {
   const now = new Date()
   return {
     protocolVersion: config.protocol,

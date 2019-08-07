@@ -9,8 +9,8 @@ const assert = require('assert')
 const log = require('./utils/logger')
 
 class Peer extends EventEmitter {
-  constructor (peerInfo, conn = null) {
-    log.trace('New peer registered %j', {peer: peerInfo.id.toB58String()})
+  constructor(peerInfo, conn = null) {
+    log.trace('New peer registered %j', { peer: peerInfo.id.toB58String() })
     assert(peerInfo, 'Need a peerInfo object to initiate the peer')
     super()
 
@@ -24,11 +24,11 @@ class Peer extends EventEmitter {
     }
   }
 
-  isConnected () {
+  isConnected() {
     return !!this.conn
   }
 
-  attachConnection (conn) {
+  attachConnection(conn) {
     if (this.conn) {
       // TODO close previously existing connection
     }
@@ -50,16 +50,18 @@ class Peer extends EventEmitter {
     this.emit('connection')
   }
 
-  sendMessages (messages) {
-    log.trace('Pushing message to peer %j', {peer: this.info.id.toB58String()})
+  sendMessages(messages) {
+    log.trace('Pushing message to peer %j', {
+      peer: this.info.id.toB58String()
+    })
     this.stream.push(messages)
   }
 
-  updateTree (topic, {parents = [], children = []}) {
-    this.trees.set(topic, {parents, children})
+  updateTree(topic, { parents = [], children = [] }) {
+    this.trees.set(topic, { parents, children })
   }
 
-  removeTree (topic) {
+  removeTree(topic) {
     const tree = this.trees.get(topic)
     if (!tree) return
 
@@ -67,14 +69,14 @@ class Peer extends EventEmitter {
     return tree
   }
 
-  addChildren (topic, children) {
+  addChildren(topic, children) {
     const tree = this.trees.get(topic)
     if (!tree) {
-      this.trees.set(topic, {children, parents: []})
+      this.trees.set(topic, { children, parents: [] })
       return
     }
-    children.forEach((child) => {
-      const exists = tree.children.find((peer) => {
+    children.forEach(child => {
+      const exists = tree.children.find(peer => {
         return peer.info.id.isEqual(child.info.id)
       })
       if (!exists) {
@@ -83,14 +85,14 @@ class Peer extends EventEmitter {
     })
   }
 
-  addParents (topic, parents) {
+  addParents(topic, parents) {
     const tree = this.trees.get(topic)
     if (!tree) {
-      this.trees.set(topic, {parents, children: []})
+      this.trees.set(topic, { parents, children: [] })
       return
     }
-    parents.forEach((parent) => {
-      const exists = tree.parents.find((peer) => {
+    parents.forEach(parent => {
+      const exists = tree.parents.find(peer => {
         return peer.info.id.isEqual(parent.info.id)
       })
       if (!exists) {
@@ -99,18 +101,18 @@ class Peer extends EventEmitter {
     })
   }
 
-  removePeer (topic, peerId) {
+  removePeer(topic, peerId) {
     const tree = this.trees.get(topic)
     const newParents = []
     const newChildren = []
     if (!tree) return
 
-    tree.parents.forEach((parent) => {
+    tree.parents.forEach(parent => {
       if (parent.info.id.isEqual(peerId)) return
       newParents.push(parent)
     })
 
-    tree.children.forEach((child) => {
+    tree.children.forEach(child => {
       if (child.info.id.isEqual(peerId)) return
       newChildren.push(child)
     })
@@ -119,7 +121,7 @@ class Peer extends EventEmitter {
     tree.parents = newParents
   }
 
-  close (callback) {
+  close(callback) {
     // End the pushable
     if (this.stream) {
       this.stream.end()
@@ -135,7 +137,7 @@ class Peer extends EventEmitter {
 
   // Only close the connection if no other
   // topic subscriptions are kept by this peer
-  gracefulClose (callback) {
+  gracefulClose(callback) {
     if (this.trees.size === 0) this.close(callback)
   }
 }

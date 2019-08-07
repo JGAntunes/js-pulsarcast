@@ -6,13 +6,10 @@ const dagCBOR = require('ipld-dag-cbor')
 const CID = require('cids')
 
 const config = require('../config')
-const {
-  linkUnmarshalling,
-  linkMarshalling
-} = require('./utils')
+const { linkUnmarshalling, linkMarshalling } = require('./utils')
 
 class EventNode {
-  constructor (topicCID, author, payload, options = {}) {
+  constructor(topicCID, author, payload, options = {}) {
     // TODO check it is a CID maybe?
     assert(topicCID, 'Need a topicCID object to create an event node')
     assert(author, 'Need an author to create an event node')
@@ -27,9 +24,11 @@ class EventNode {
     this.metadata = createMetadata(options.metadata)
   }
 
-  static deserialize (event) {
+  static deserialize(event) {
     const topicCID = linkUnmarshalling(event.topic)
-    const publisher = event.publisher ? PeerId.createFromBytes(event.publisher) : null
+    const publisher = event.publisher
+      ? PeerId.createFromBytes(event.publisher)
+      : null
     const author = PeerId.createFromBytes(event.author)
     const payload = event.payload
     const parent = linkUnmarshalling(event.parent)
@@ -41,18 +40,18 @@ class EventNode {
     })
   }
 
-  static deserializeCBOR (event, cb) {
+  static deserializeCBOR(event, cb) {
     dagCBOR.util.deserialize(event, (err, result) => {
       if (err) return cb(err)
       cb(null, EventNode.deserialize(result))
     })
   }
 
-  get isPublished () {
+  get isPublished() {
     return Boolean(this.publisher)
   }
 
-  getReadableFormat () {
+  getReadableFormat() {
     return {
       topicCID: this.topicCID.toBaseEncodedString(),
       author: this.author.toB58String(),
@@ -64,11 +63,11 @@ class EventNode {
     }
   }
 
-  getCID (cb) {
+  getCID(cb) {
     dagCBOR.util.cid(this.serialize(), cb)
   }
 
-  serialize () {
+  serialize() {
     return {
       topic: linkMarshalling(this.topicCID),
       publisher: this.isPublished ? this.publisher.toBytes() : null,
@@ -82,13 +81,13 @@ class EventNode {
     }
   }
 
-  serializeCBOR (cb) {
+  serializeCBOR(cb) {
     const serialized = this.serialize()
     dagCBOR.util.serialize(serialized, cb)
   }
 }
 
-function createMetadata ({
+function createMetadata({
   created = new Date(),
   protocolVersion = config.protocol
 } = {}) {

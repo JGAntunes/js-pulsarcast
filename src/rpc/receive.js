@@ -9,7 +9,7 @@ const { protobuffers, schemas, marshalling } = require('../messages')
 
 const ops = protobuffers.RPC.Operation
 
-function createRPCHandlers (pulsarcastNode) {
+function createRPCHandlers(pulsarcastNode) {
   const dht = pulsarcastNode.libp2p._dht
 
   return {
@@ -25,10 +25,10 @@ function createRPCHandlers (pulsarcastNode) {
     genericHandler
   }
 
-  function publish (idB58Str, eventNode, callback) {
+  function publish(idB58Str, eventNode, callback) {
     // Only consider the message if we have data
     if (!eventNode) return callback()
-    const {me} = pulsarcastNode
+    const { me } = pulsarcastNode
     const myId = me.info.id
 
     // Publish is from this node so it's a new event
@@ -38,28 +38,40 @@ function createRPCHandlers (pulsarcastNode) {
     getTopic(dht, eventNode.topicCID, (err, topicNode) => {
       if (err) return callback(err)
 
-      const {
-        allowedPublishers
-      } = topicNode.metadata
+      const { allowedPublishers } = topicNode.metadata
 
       // New event published at this node and not allowed to publish
-      if (newEvent && allowedPublishers && !allowedPublishers.find((peer) => peer.isEqual(myId))) {
-        return requestToPublish(myId.toB58String(), eventNode, (err, topicNode, eventNode) => {
-          callback(err, null, topicNode, eventNode)
-        })
+      if (
+        newEvent &&
+        allowedPublishers &&
+        !allowedPublishers.find(peer => peer.isEqual(myId))
+      ) {
+        return requestToPublish(
+          myId.toB58String(),
+          eventNode,
+          (err, topicNode, eventNode) => {
+            callback(err, null, topicNode, eventNode)
+          }
+        )
       }
 
       // TODO check publisher is allowed
 
       const options = { isNewEvent: newEvent }
-      pulsarcastNode.rpc.send.event.publish(topicNode, eventNode, idB58Str, options, callback)
+      pulsarcastNode.rpc.send.event.publish(
+        topicNode,
+        eventNode,
+        idB58Str,
+        options,
+        callback
+      )
     })
   }
 
-  function requestToPublish (idB58Str, eventNode, callback) {
+  function requestToPublish(idB58Str, eventNode, callback) {
     // Only consider the message if we have data
     if (!eventNode) return
-    const {me} = pulsarcastNode
+    const { me } = pulsarcastNode
     const myId = me.info.id
 
     log.trace('Got request to publish  %j', eventNode)
@@ -67,38 +79,53 @@ function createRPCHandlers (pulsarcastNode) {
     getTopic(dht, eventNode.topicCID, (err, topicNode) => {
       if (err) return callback(err)
 
-      const {
-        allowedPublishers,
-        requestToPublish
-      } = topicNode.metadata
+      const { allowedPublishers, requestToPublish } = topicNode.metadata
 
       // TODO better handling for this case
       if (!requestToPublish) return callback(null, topicNode, eventNode)
       // TODO better handling for this case
-      if (Array.isArray(requestToPublish) && !requestToPublish.find((peer) => peer.isEqual(topicNode.author))) return callback(null, topicNode, eventNode)
+      if (
+        Array.isArray(requestToPublish) &&
+        !requestToPublish.find(peer => peer.isEqual(topicNode.author))
+      )
+        return callback(null, topicNode, eventNode)
 
       // Publish if I'm allowed to
-      if (!allowedPublishers || allowedPublishers.find((peer) => peer.isEqual(myId))) {
-        return pulsarcastNode.rpc.send.event.publish(topicNode, eventNode, myId.toB58String(), {isNewEvent: true}, callback)
+      if (
+        !allowedPublishers ||
+        allowedPublishers.find(peer => peer.isEqual(myId))
+      ) {
+        return pulsarcastNode.rpc.send.event.publish(
+          topicNode,
+          eventNode,
+          myId.toB58String(),
+          { isNewEvent: true },
+          callback
+        )
       }
       // Propagate request to publish
-      pulsarcastNode.rpc.send.event.requestToPublish(topicNode, eventNode, idB58Str, callback)
+      pulsarcastNode.rpc.send.event.requestToPublish(
+        topicNode,
+        eventNode,
+        idB58Str,
+        callback
+      )
     })
   }
 
-  function update (idB58Str, peerTree) {
+  function update(idB58Str, peerTree) {
     // Only consider the emessage if we have data
     if (!peerTree) return
     const topicCID = peerTree.topicId.toBaseEncodedString()
 
     log.trace('Got update  %j', peerTree)
 
-    const {peers} = pulsarcastNode
+    const { peers } = pulsarcastNode
     peers.get(idB58Str).updateTree(topicCID, peerTree)
   }
 
-  function join (idB58Str, topicCID, callback) {
-    const {me, peers} = pulsarcastNode
+  function join(idB58Str, topicCID, callback) {
+    const { me, peers } = pulsarcastNode
     const topicB58Str = topicCID.toBaseEncodedString()
 
     // The peer should already be in the list given that
@@ -117,17 +144,19 @@ function createRPCHandlers (pulsarcastNode) {
         child.addParents(topicB58Str, [me])
         // TODO take care of delivering initial state
         // This node is the root node for the topic
-        if (me.info.id.isEqual(topicNode.author)) return callback(null, topicNode)
+        if (me.info.id.isEqual(topicNode.author))
+          return callback(null, topicNode)
         // Check if we have a set of parents for this topic
-        if (me.trees.get(topicB58Str).parents > 0) return callback(null, topicNode)
+        if (me.trees.get(topicB58Str).parents > 0)
+          return callback(null, topicNode)
       }
 
       pulsarcastNode.rpc.send.topic.join(topicNode, callback)
     })
   }
 
-  function leave (idB58Str, topicCID, callback) {
-    const {me, peers} = pulsarcastNode
+  function leave(idB58Str, topicCID, callback) {
+    const { me, peers } = pulsarcastNode
     const topicB58Str = topicCID.toBaseEncodedString()
     const myId = me.info.id
 
@@ -154,9 +183,14 @@ function createRPCHandlers (pulsarcastNode) {
 
         // Need to forward the leave rpc
         const peers = tree.children.concat(tree.parents)
-        return eachLimit(peers, 20, (peer, done) => {
-          pulsarcastNode.rpc.send.topic.leave(topicNode, peer, done)
-        }, err => callback(err))
+        return eachLimit(
+          peers,
+          20,
+          (peer, done) => {
+            pulsarcastNode.rpc.send.topic.leave(topicNode, peer, done)
+          },
+          err => callback(err)
+        )
       }
 
       // Remove the peer from our tree
@@ -170,14 +204,18 @@ function createRPCHandlers (pulsarcastNode) {
         if (err) return callback(err)
 
         // If this node is a child, we need to rejoin the topic
-        if (me.trees.get(topicB58Str).children.find((peer) => peer.info.id.isEqual(myId))) {
+        if (
+          me.trees
+            .get(topicB58Str)
+            .children.find(peer => peer.info.id.isEqual(myId))
+        ) {
           pulsarcastNode.rpc.send.topic.join(topicNode, callback)
         }
       })
     })
   }
 
-  function genericHandler (idB58Str, message) {
+  function genericHandler(idB58Str, message) {
     const result = Joi.validate(message, schemas.rpc, {
       abortEarly: true,
       allowUnknown: false,
@@ -191,8 +229,12 @@ function createRPCHandlers (pulsarcastNode) {
     // with type coercion
     const jsonMessage = marshalling.unmarshall(result.value)
 
-    log.trace('Received rpc %j', {handler: 'in', op: jsonMessage.op, from: idB58Str})
-    const errorHandler = (err) => {
+    log.trace('Received rpc %j', {
+      handler: 'in',
+      op: jsonMessage.op,
+      from: idB58Str
+    })
+    const errorHandler = err => {
       if (err) log.error('%j', err)
     }
 

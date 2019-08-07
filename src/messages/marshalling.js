@@ -7,7 +7,7 @@ const EventNode = require('../dag/event-node')
 const TopicNode = require('../dag/topic-node')
 const ops = require('./protobuffers').RPC.Operation
 
-function unmarshall (message) {
+function unmarshall(message) {
   // TODO improve code unmarshalling
   const result = {}
   result.metadata = message.metadata
@@ -41,7 +41,7 @@ function unmarshall (message) {
   return result
 }
 
-function marshall (message) {
+function marshall(message) {
   // TODO improve code marshalling
   const result = {}
   result.metadata = message.metadata
