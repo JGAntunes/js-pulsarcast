@@ -1,8 +1,9 @@
 'use strict'
 
-const { waterfall } = require('async')
+const { eachLimit, waterfall } = require('async')
 
 const EventTree = require('../dag/event-tree')
+const TopicNode = require('../dag/topic-node')
 const { createRPC, marshalling, protobuffers } = require('../messages')
 const log = require('../utils/logger')
 const { closestPeerToPeer, store } = require('../utils/dht-helpers')
@@ -145,13 +146,69 @@ function createRPCHandlers(pulsarcastNode) {
 
   // TODO for now only store topic descriptor
   function newTopic(topicNode, options, callback) {
+    const { me, subscriptions } = pulsarcastNode
     // check if options exist
     if (!callback) {
       callback = options
       options = {}
     }
 
-    store(dht, topicNode, callback)
+    waterfall(
+      [
+        // Check if the sub topics exist
+        cb => {
+          eachLimit(
+            Object.values(topicNode.subTopics),
+            20,
+            (topicCid, done) => pulsarcastNode._getTopic(topicCid, done),
+            cb
+          )
+        },
+        // Get the parent topic
+        cb => {
+          if (!topicNode.parent) return setImmediate(cb, null, null)
+
+          pulsarcastNode._getTopic(topicNode.parent, (err, topicNode) =>
+            cb(err, topicNode)
+          )
+        },
+        // Get the meta topic or create a new one
+        (parentTopic, cb) => {
+          if (parentTopic)
+            return setImmediate(cb, null, parentTopic.subTopics.meta)
+
+          const metaTopicNode = new TopicNode(
+            `meta-${topicNode.name}`,
+            me.info.id,
+            {
+              metadata: { allowedPublishers: [me.info.id] }
+            }
+          )
+
+          pulsarcastNode._addTopic(
+            metaTopicNode,
+            (err, linkedTopic, metaTopicCID) => {
+              if (err) return cb(err)
+
+              store(dht, metaTopicNode, (err, cid) => cb(err, cid))
+            }
+          )
+        },
+        // Store the new topic
+        (metaCID, cb) => {
+          topicNode.subTopics.meta = metaCID
+
+          pulsarcastNode._addTopic(topicNode, (err, topicNode, topicCID) => {
+            if (err) return cb(err)
+
+            subscriptions.add(metaCID.toBaseEncodedString())
+            subscriptions.add(topicCID.toBaseEncodedString())
+            store(dht, topicNode, cb)
+          })
+        }
+      ],
+      (err, cid) => callback(err, cid, topicNode)
+    )
   }
 
   function send(peer, rpc) {

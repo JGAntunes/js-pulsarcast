@@ -63,13 +63,17 @@ describe('2 nodes', () => {
       (err, savedCID, childTopicNode) => {
         expect(err).to.not.exist
         expect(childTopicNode).to.be.an.instanceof(TopicNode)
-        expect(childTopicNode.subTopics.meta).to.be.an.instanceof(CID)
         expect(childTopicNode.parent.equals(topicCID)).to.be.true
+        // Meta topic is the same has the parent
+        expect(childTopicNode.subTopics.meta).to.be.an.instanceof(CID)
+        expect(topic.subTopics.meta.equals(childTopicNode.subTopics.meta)).to.be
+          .true
         childTopicNode.getCID((err, cid) => {
           expect(err).to.not.exist
           const topicB58Str = cid.toBaseEncodedString()
           expect(cid.equals(savedCID)).to.be.true
-          expect(nodes[0].subscriptions.size).to.equal(4)
+          // Meta topic is the same has the parent
+          expect(nodes[0].subscriptions.size).to.equal(3)
           expect(nodes[0].subscriptions.has(topicB58Str)).to.be.true
           done()
         })
@@ -90,7 +94,7 @@ describe('2 nodes', () => {
           expect(err).to.not.exist
           const topicB58Str = cid.toBaseEncodedString()
           expect(cid.equals(savedCID)).to.be.true
-          expect(nodes[0].subscriptions.size).to.equal(6)
+          expect(nodes[0].subscriptions.size).to.equal(5)
           expect(nodes[0].subscriptions.has(topicB58Str)).to.be.true
           done()
         })

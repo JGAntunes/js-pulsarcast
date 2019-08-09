@@ -5,7 +5,7 @@ const assert = require('assert')
 const lp = require('pull-length-prefixed')
 const pull = require('pull-stream')
 const CID = require('cids')
-const { eachLimit, series, waterfall } = require('async')
+const { eachLimit, series } = require('async')
 
 const log = require('./utils/logger')
 const { getTopic } = require('./utils/dht-helpers')
@@ -382,57 +382,8 @@ class Pulsarcast extends EventEmitter {
     log.trace('Creating topic %j', { command: 'create-topic', topicName })
 
     const topicOptions = { ...defaultTopicOptions, ...options }
-
-    // Topics to check
-    const topicsToLink = []
-    if (topicOptions.parent) {
-      topicsToLink.push(topicOptions.parent)
-    }
-    if (topicOptions.subTopics && topicOptions.subTopics !== {}) {
-      topicsToLink.push(...Object.values(topicOptions.subTopics))
-    }
-
-    waterfall(
-      [
-        // Check the existence of parent and subTopics
-        cb => {
-          if (topicsToLink.length === 0) return setImmediate(cb)
-          eachLimit(
-            topicsToLink,
-            20,
-            (topicB58Str, done) => this._getTopic(new CID(topicB58Str), done),
-            cb
-          )
-        },
-        // Setup the meta topic node
-        cb => {
-          const topicNode = new TopicNode(
-            `meta-${topicName}`,
-            myId,
-            topicOptions
-          )
-
-          this._addTopic(topicNode, (err, linkedTopic, topicCID) => {
-            if (err) return cb(err)
-
-            this.subscriptions.add(topicCID.toBaseEncodedString())
-            cb(null, topicCID)
-          })
-        },
-        (metaCid, cb) => {
-          topicOptions.subTopics.meta = metaCid.toBaseEncodedString()
-          const topicNode = new TopicNode(topicName, myId, topicOptions)
-
-          this._addTopic(topicNode, (err, linkedTopic, topicCID) => {
-            if (err) return cb(err)
-
-            this.subscriptions.add(topicCID.toBaseEncodedString())
-            this.rpc.send.topic.new(linkedTopic, cb)
-          })
-        }
-      ],
-      (err, cid, topicNode) => callback(err, cid, topicNode)
-    )
+    const topicNode = new TopicNode(topicName, myId, topicOptions)
+    this.rpc.send.topic.new(topicNode, callback)
   }
 
   updateTopic(topicB58Str, options, callback) {

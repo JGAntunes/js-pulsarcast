@@ -19,6 +19,7 @@ describe('multiple nodes', function() {
   let topic
   let topicCID
   let parentTopicCID
+  let parentTopic
   let subTopicCID
 
   // Parameters
@@ -64,6 +65,7 @@ describe('multiple nodes', function() {
           expect(nodes[publisher + 1].subscriptions.size).to.equal(2)
           expect(nodes[publisher + 1].subscriptions.has(topicB58Str)).to.be.true
           parentTopicCID = cid
+          parentTopic = topicNode
           done()
         })
       }
@@ -102,10 +104,13 @@ describe('multiple nodes', function() {
       (err, savedCID, topicNode) => {
         expect(err).to.not.exist
         expect(topicNode).to.be.an.instanceof(TopicNode)
-        expect(topicNode.subTopics.meta).to.be.an.instanceof(CID)
         expect(topicNode.parent.equals(parentTopicCID)).to.be.true
         expect(topicNode.subTopics['test-subtopic'].equals(subTopicCID)).to.be
           .true
+        // Meta topic is the same has the parent
+        expect(topicNode.subTopics.meta).to.be.an.instanceof(CID)
+        expect(topicNode.subTopics.meta.equals(parentTopic.subTopics.meta)).to
+          .be.true
         topicNode.getCID((err, cid) => {
           expect(err).to.not.exist
           const topicB58Str = cid.toBaseEncodedString()
