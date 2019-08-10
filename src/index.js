@@ -110,27 +110,27 @@ class Pulsarcast extends EventEmitter {
     })
   }
 
-  _addTopic(topicNode, cb) {
+  _addTopic(topicNode, callback) {
     topicNode.getCID((err, topicCID) => {
-      if (err) return cb(err)
+      if (err) return callback(err)
       this.topics.set(topicCID.toBaseEncodedString(), topicNode)
-      cb(null, topicNode, topicCID)
+      callback(null, topicNode, topicCID)
     })
   }
 
-  _getTopic(topicCID, cb) {
+  _getTopic(topicCID, callback) {
     const topicB58Str = topicCID.toBaseEncodedString()
 
     log.trace('Looking for topic %j', { topic: topicB58Str })
 
     const topicNode = this.topics.get(topicB58Str)
     // We have the topic locally
-    if (topicNode) return cb(null, topicNode)
+    if (topicNode) return callback(null, topicNode)
     // Perform a DHT query for it
     getTopic(this.libp2p._dht, topicCID, (err, topicNode) => {
-      if (err) return cb(err)
+      if (err) return callback(err)
 
-      this._addTopic(topicNode, cb)
+      this._addTopic(topicNode, callback)
     })
   }
 
@@ -249,14 +249,14 @@ class Pulsarcast extends EventEmitter {
   start(callback) {
     log('Starting PulsarCast')
     if (this.started) {
-      return setImmediate(() => callback(new Error('already started')))
+      return setImmediate(callback, new Error('already started'))
     }
 
     this.libp2p.handle(protocol, this._onConnection)
 
     this.started = true
     log.trace('Ready')
-    setImmediate(() => callback())
+    setImmediate(callback)
   }
 
   stop(callback) {
@@ -281,45 +281,44 @@ class Pulsarcast extends EventEmitter {
     )
   }
 
-  publish(topicB58Str, message, options, callback) {
+  publish(topicB58Str, message, callback) {
     assert(this.started, 'Pulsarcast is not started')
-
-    if (!callback) {
-      callback = options
-      options = {}
-    }
 
     log.trace('Publishing message %j', {
       command: 'publish',
       topic: topicB58Str
     })
 
+    let eventNode
     try {
       const payload = Buffer.isBuffer(message)
         ? message
         : Buffer.from(message, 'utf8')
       const topicCID = new CID(topicB58Str)
 
-      const eventNode = new EventNode(topicCID, this.me.info.id, payload)
-      return this.rpc.receive.event.publish(
-        this.me.info.id.toB58String(),
-        eventNode,
-        callback
-      )
+      eventNode = new EventNode(topicCID, this.me.info.id, payload)
     } catch (e) {
-      setImmediate(callback, e)
+      return setImmediate(callback, e)
     }
+    this.rpc.receive.event.publish(
+      this.me.info.id.toB58String(),
+      eventNode,
+      callback
+    )
   }
 
   subscribe(topicB58Str, callback) {
     assert(this.started, 'Pulsarcast is not started')
+    const topicCID = new CID(topicB58Str)
 
     if (this.subscriptions.has(topicB58Str)) {
       log.trace('Already subscribed to topic %j', {
         command: 'subscribe',
         topic: topicB58Str
       })
-      return setImmediate(callback)
+      return this._getTopic(topicCID, (err, topicNode) => {
+        callback(err, topicNode, topicCID)
+      })
     }
 
     log.trace('Subscribing to topic %j', {
@@ -328,7 +327,6 @@ class Pulsarcast extends EventEmitter {
     })
 
     this.subscriptions.add(topicB58Str)
-    const topicCID = new CID(topicB58Str)
 
     this.rpc.receive.topic.join(
       this.me.info.id.toB58String(),

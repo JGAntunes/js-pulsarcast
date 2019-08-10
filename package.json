@@ -7,7 +7,7 @@
     "fmt": "prettier --write '{,!(coverage)/**/}*.js' && eslint --fix .",
     "fmt:ci": "prettier -l '{,!(coverage)/**/}*.js'",
     "lint": "eslint .",
-    "test": "nyc --reporter=html --reporter=text mocha --recursive --exit",
+    "test": "nyc --reporter=html --reporter=text mocha --recursive --bail --exit",
     "test:ci": "npm run lint && npm run fmt:ci && npm test"
   },
   "nyc": {

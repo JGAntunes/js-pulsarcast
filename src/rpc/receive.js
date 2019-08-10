@@ -33,8 +33,8 @@ function createRPCHandlers(pulsarcastNode) {
 
     // Publish is from this node so it's a new event
     const newEvent = myId.toB58String() === idB58Str
-    log.trace('Got publish %j', eventNode)
 
+    log.trace('Got publish %j', eventNode)
     getTopic(dht, eventNode.topicCID, (err, topicNode) => {
       if (err) return callback(err)
 
@@ -142,7 +142,6 @@ function createRPCHandlers(pulsarcastNode) {
         me.addChildren(topicB58Str, [child])
         // Add me as a parent to this peer
         child.addParents(topicB58Str, [me])
-        // TODO take care of delivering initial state
         // This node is the root node for the topic
         if (me.info.id.isEqual(topicNode.author))
           return callback(null, topicNode)

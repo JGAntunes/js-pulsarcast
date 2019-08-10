@@ -79,8 +79,8 @@ function createRPCHandlers(pulsarcastNode) {
         peers.forEach(peer => {
           // Don't forward the message back
           if (peer.info.id.toB58String() !== fromIdB58Str) send(peer, rpc)
-          return callback(null, eventCID, topicNode, linkedEvent)
         })
+        return callback(null, eventCID, topicNode, linkedEvent)
       }
     )
   }
@@ -101,8 +101,8 @@ function createRPCHandlers(pulsarcastNode) {
       peers.forEach(peer => {
         // Don't forward the message back
         if (peer.info.id.toB58String() !== fromIdB58Str) send(peer, rpc)
-        return callback(null, topicNode, eventNode)
       })
+      return callback(null, topicNode, eventNode)
     })
   }
 
@@ -144,14 +144,8 @@ function createRPCHandlers(pulsarcastNode) {
     })
   }
 
-  // TODO for now only store topic descriptor
-  function newTopic(topicNode, options, callback) {
+  function newTopic(topicNode, callback) {
     const { me, subscriptions } = pulsarcastNode
-    // check if options exist
-    if (!callback) {
-      callback = options
-      options = {}
-    }
 
     waterfall(
       [
@@ -194,6 +188,12 @@ function createRPCHandlers(pulsarcastNode) {
             }
           )
         },
+        // Subscribe to the meta topic
+        (metaCID, cb) => {
+          pulsarcastNode.subscribe(metaCID.toBaseEncodedString(), err =>
+            cb(err, metaCID)
+          )
+        },
         // Store the new topic
         (metaCID, cb) => {
           topicNode.subTopics.meta = metaCID
@@ -201,10 +201,22 @@ function createRPCHandlers(pulsarcastNode) {
           pulsarcastNode._addTopic(topicNode, (err, topicNode, topicCID) => {
             if (err) return cb(err)
 
-            subscriptions.add(metaCID.toBaseEncodedString())
             subscriptions.add(topicCID.toBaseEncodedString())
             store(dht, topicNode, cb)
           })
+        },
+        // Publish the new topic descriptor through meta topic
+        (topicCID, topicNode, cb) => {
+          const metaB58Str = topicNode.subTopics.meta.toBaseEncodedString()
+          waterfall(
+            [
+              cb => topicNode.serializeCBOR(cb),
+              (serialized, cb) =>
+                pulsarcastNode.publish(metaB58Str, serialized, cb)
+            ],
+            // Return the topicCID
+            err => cb(err, topicCID)
+          )
         }
       ],
       (err, cid) => callback(err, cid, topicNode)

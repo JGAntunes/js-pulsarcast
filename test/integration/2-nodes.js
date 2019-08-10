@@ -57,6 +57,23 @@ describe('2 nodes', () => {
   })
 
   it('creates a new topic with a parent', done => {
+    let newTopic
+
+    // Register the meta event handler to check the new topic update
+    nodes[0].once(topic.subTopics.meta.toBaseEncodedString(), eventNode => {
+      TopicNode.deserializeCBOR(eventNode.payload, (err, childTopicNode) => {
+        expect(err).to.not.exist
+
+        // If topic creation returned, check the topics match
+        if (newTopic) {
+          expect(childTopicNode.serialize()).to.deep.equal(newTopic.serialize())
+          return done()
+        }
+        newTopic = childTopicNode
+      })
+    })
+
+    // Create the topic
     nodes[0].createTopic(
       'test-2.0',
       { parent: topicCID.toBaseEncodedString() },
@@ -75,7 +92,14 @@ describe('2 nodes', () => {
           // Meta topic is the same has the parent
           expect(nodes[0].subscriptions.size).to.equal(3)
           expect(nodes[0].subscriptions.has(topicB58Str)).to.be.true
-          done()
+          // If meta topic event handler returned, check the topics match
+          if (newTopic) {
+            expect(childTopicNode.serialize()).to.deep.equal(
+              newTopic.serialize()
+            )
+            return done()
+          }
+          newTopic = childTopicNode
         })
       }
     )
