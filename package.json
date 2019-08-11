@@ -8,7 +8,8 @@
     "fmt:ci": "prettier -l '{,!(coverage)/**/}*.js'",
     "lint": "eslint .",
     "test": "nyc --reporter=html --reporter=text mocha --recursive --bail --exit",
-    "test:ci": "npm run lint && npm run fmt:ci && npm test"
+    "test:ci": "npm run lint && npm run fmt:ci && npm test",
+    "docs": "jsdoc2md -f ./src/** > docs/api.md"
   },
   "nyc": {
     "exclude": [
