@@ -71,13 +71,6 @@
   },
   "devDependencies": {
     "chai": "^4.2.0",
-    "libp2p": "jgantunes/js-libp2p",
-    "libp2p-kad-dht": "jgantunes/js-libp2p-kad-dht",
-    "libp2p-secio": "^0.11.1",
-    "libp2p-spdy": "^0.13.1",
-    "libp2p-tcp": "jgantunes/js-libp2p-tcp",
-    "mocha": "^5.2.0",
-    "nyc": "^14.0.0",
     "eslint": "^5.11.1",
     "eslint-config-prettier": "^3.3.0",
     "eslint-config-standard": "^12.0.0",
@@ -87,7 +80,15 @@
     "eslint-plugin-promise": "^4.0.1",
     "eslint-plugin-standard": "^4.0.0",
     "husky": "^1.3.0",
+    "jsdoc-to-markdown": "^5.0.0",
+    "libp2p": "jgantunes/js-libp2p",
+    "libp2p-kad-dht": "jgantunes/js-libp2p-kad-dht",
+    "libp2p-secio": "^0.11.1",
+    "libp2p-spdy": "^0.13.1",
+    "libp2p-tcp": "jgantunes/js-libp2p-tcp",
     "lint-staged": "^8.1.0",
+    "mocha": "^5.2.0",
+    "nyc": "^14.0.0",
     "prettier": "^1.15.3"
   }
 }
