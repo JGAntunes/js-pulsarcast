@@ -13,11 +13,10 @@ const { linkUnmarshalling, linkMarshalling } = require('./utils')
  *
  * @typedef {Object} SerializedEvent
  * @property {{'/': Buffer}} topic - The topic DAG link
- * @property {Buffer} publisher -  The topic publisher
- * @property {Buffer} author -  The topic author
+ * @property {Buffer} author -  The event author
  * @property {Buffer} payload -  Event payload
+ * @property {Buffer} publisher -  The event publisher
  * @property {{'/': Buffer}} parent -  The event parent DAG link
- * @property {object.<string, {'/': Buffer}>} # -  The topic sub topics, were the keys are names and the values DAG links
  * @property {object} metadata - Event metadata object
  * @property {string} metadata.version - Pulsarcast protocol version used for this event
  * @property {string} metadata.created - Date in ISO string format

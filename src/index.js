@@ -453,7 +453,7 @@ class Pulsarcast extends EventEmitter {
    * @param {object} [options.metadata={}] - Metadata options
    * @param {array.<string>} [options.metadata.allowedPublishers] - Allowed publishers (defaults to only this node)
    * @param {boolean} [options.metadata.requestToPublish=true] - Allow other nodes to request to publish
-   * @param {string} [options.metadata.eventLinking='LAST_SEEN'] - Method used for linking events
+   * @param {string} [options.metadata.eventLinking=LAST_SEEN] - Method used for linking events
    * @param {function(Error, CID, TopicNode)} callback
    * @return {void}
    */

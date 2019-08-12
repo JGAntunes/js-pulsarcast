@@ -200,7 +200,7 @@ Create a topic
 | [options.metadata] | <code>object</code> | <code>{}</code> | Metadata options |
 | [options.metadata.allowedPublishers] | <code>array.&lt;string&gt;</code> |  | Allowed publishers (defaults to only this node) |
 | [options.metadata.requestToPublish] | <code>boolean</code> | <code>true</code> | Allow other nodes to request to publish |
-| [options.metadata.eventLinking] | <code>string</code> | <code>&quot;&#x27;LAST_SEEN&#x27;&quot;</code> | Method used for linking events |
+| [options.metadata.eventLinking] | <code>string</code> | <code>&quot;LAST_SEEN&quot;</code> | Method used for linking events |
 | callback | <code>function</code> |  |  |
 
 <a name="EventNode"></a>
@@ -473,7 +473,7 @@ Create a new TopicNode.
 | [options.metadata] | <code>object</code> | <code>{}</code> | Metadata options |
 | [options.metadata.allowedPublishers] | <code>array.&lt;string&gt;</code> |  | Allowed publishers (defaults to only this node) |
 | [options.metadata.requestToPublish] | <code>boolean</code> | <code>true</code> | Allow other nodes to request to publish |
-| [options.metadata.eventLinking] | <code>string</code> | <code>&quot;&#x27;LAST_SEEN&#x27;&quot;</code> | Method used for linking events |
+| [options.metadata.eventLinking] | <code>string</code> | <code>&quot;LAST_SEEN&quot;</code> | Method used for linking events |
 
 <a name="TopicNode+name"></a>
 
@@ -590,11 +590,10 @@ Serialized event representation
 | Name | Type | Description |
 | --- | --- | --- |
 | topic | <code>Object</code> | The topic DAG link |
-| publisher | <code>Buffer</code> | The topic publisher |
-| author | <code>Buffer</code> | The topic author |
+| author | <code>Buffer</code> | The event author |
 | payload | <code>Buffer</code> | Event payload |
+| publisher | <code>Buffer</code> | The event publisher |
 | parent | <code>Object</code> | The event parent DAG link |
-| # | <code>object.&lt;string, {&#x27;/&#x27;: Buffer}&gt;</code> | The topic sub topics, were the keys are names and the values DAG links |
 | metadata | <code>object</code> | Event metadata object |
 | metadata.version | <code>string</code> | Pulsarcast protocol version used for this event |
 | metadata.created | <code>string</code> | Date in ISO string format |
