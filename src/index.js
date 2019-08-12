@@ -18,6 +18,20 @@ const EventNode = require('./dag/event-node')
 const TopicNode = require('./dag/topic-node')
 
 /**
+ * CID (Content Identifier)
+ *
+ * @external CID
+ * @see {@link https://github.com/multiformats/js-cid#api}
+ */
+
+/**
+ * Libp2p node
+ *
+ * @external Libp2pNode
+ * @see {@link https://github.com/libp2p/js-libp2p#api}
+ */
+
+/**
  * A Javascript implementation of Pulsarcast
  *
  * See design and specs at https://github.com/JGAntunes/pulsarcast
@@ -26,8 +40,8 @@ class Pulsarcast extends EventEmitter {
   /**
    * Create a new PulsarCast node.
    *
-   * @param {Libp2pNode} libp2p
-   * @param {object} options - PulsarCast options
+   * @param {external:Libp2pNode} libp2p
+   * @param {object} [options={}] - PulsarCast options
    */
   constructor(libp2p, options = {}) {
     super()
@@ -35,7 +49,7 @@ class Pulsarcast extends EventEmitter {
     /**
      * Local ref to the libp2p node.
      *
-     * @type {Libp2p}
+     * @type {external:Libp2pNode}
      */
     this.libp2p = libp2p
 
@@ -49,32 +63,32 @@ class Pulsarcast extends EventEmitter {
     /**
      * Map of peers.
      *
-     * @type {Map<string, Peer>}
+     * @type {Map.<string, Peer>}
      */
     this.peers = new Map()
 
     /**
      * Map of topics.
      *
-     * @type {Map<string, TopicNode>}
+     * @type {Map.<string, TopicNode>}
      */
     this.topics = new Map()
 
     /**
      * List of our subscriptions
-     * @type {Set<string>}
+     * @type {Set.<string>}
      */
     this.subscriptions = new Set()
 
     /**
      * Map of the event dissemination trees.
      *
-     * @type {Map<string, EventTree>}
+     * @type {Map.<string, EventTree>}
      */
     this.eventTrees = new Map()
 
     /**
-     * Our peer object.
+     * This node peer object.
      *
      * @type {Peer}
      */
@@ -285,7 +299,7 @@ class Pulsarcast extends EventEmitter {
    * Start the PulsarCast node
    *
    * @param {function(Error)} callback
-   * @return void
+   * @return {void}
    */
   start(callback) {
     log('Starting PulsarCast')
@@ -304,7 +318,7 @@ class Pulsarcast extends EventEmitter {
    * Stop the PulsarCast node
    *
    * @param {function(Error)} callback
-   * @return void
+   * @return {void}
    */
   stop(callback) {
     if (!this.started) {
@@ -334,7 +348,7 @@ class Pulsarcast extends EventEmitter {
    * @param {string} topicB58Str - topic base58 string
    * @param {Buffer} message - message to publish
    * @param {function(Error)} callback
-   * @return void
+   * @return {void}
    */
   publish(topicB58Str, message, callback) {
     assert(this.started, 'Pulsarcast is not started')
@@ -367,7 +381,7 @@ class Pulsarcast extends EventEmitter {
    *
    * @param {string} topicB58Str - topic base58 string
    * @param {function(Error, TopicNode)} callback
-   * @return void
+   * @return {void}
    */
   subscribe(topicB58Str, callback) {
     assert(this.started, 'Pulsarcast is not started')
@@ -433,15 +447,15 @@ class Pulsarcast extends EventEmitter {
    * Create a topic
    *
    * @param {string} topicName - topic name
-   * @param {object} options - Topic creation options
-   * @param {string} options.parent - Parent topic base58 string
-   * @param {object.<string, string>} options.subTopics - Sub topics map, with names as keys and base58 strings as values
-   * @param {object} options.metadata - Metadata options
-   * @param {array.<string>} options.metadata.allowedPublishers - Allowed publishers (defaults to only this node)
-   * @param {boolean} options.metadata.requestToPublish - Allow other nodes to request to publish (defaults to true)
-   * @param {string} options.metadata.eventLinking - Method used for linking events (defaults to LAST_SEEN)
+   * @param {object} [options={}] - Topic creation options
+   * @param {string} [options.parent=null] - Parent topic base58 string
+   * @param {object.<string, string>} [options.subTopics={}] - Sub topics map, with names as keys and base58 strings as values
+   * @param {object} [options.metadata={}] - Metadata options
+   * @param {array.<string>} [options.metadata.allowedPublishers] - Allowed publishers (defaults to only this node)
+   * @param {boolean} [options.metadata.requestToPublish=true] - Allow other nodes to request to publish
+   * @param {string} [options.metadata.eventLinking='LAST_SEEN'] - Method used for linking events
    * @param {function(Error, CID, TopicNode)} callback
-   * @return void
+   * @return {void}
    */
   createTopic(topicName, options, callback) {
     assert(this.started, 'Pulsarcast is not started')

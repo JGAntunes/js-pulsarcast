@@ -8,22 +8,118 @@ const CID = require('cids')
 const config = require('../config')
 const { linkUnmarshalling, linkMarshalling } = require('./utils')
 
+/**
+ * Serialized event representation
+ *
+ * @typedef {Object} SerializedEvent
+ * @property {{'/': Buffer}} topic - The topic DAG link
+ * @property {Buffer} publisher -  The topic publisher
+ * @property {Buffer} author -  The topic author
+ * @property {Buffer} payload -  Event payload
+ * @property {{'/': Buffer}} parent -  The event parent DAG link
+ * @property {object.<string, {'/': Buffer}>} # -  The topic sub topics, were the keys are names and the values DAG links
+ * @property {object} metadata - Event metadata object
+ * @property {string} metadata.version - Pulsarcast protocol version used for this event
+ * @property {string} metadata.created - Date in ISO string format
+ */
+
+/**
+ * Human readable event representation
+ *
+ * @typedef {Object} ReadableEvent
+ * @property {string} topicCID
+ * @property {string} author -  The event author base58 id
+ * @property {Buffer} payload -  Event payload
+ * @property {string} publisher -  The event publisher base58 id
+ * @property {string} parent -  The event parent base58 id
+ * @property {boolean} isPublished
+ * @property {object} metadata - Event metadata object
+ * @property {string} metadata.version - Pulsarcast protocol version used for this event
+ * @property {string} metadata.created - Date in ISO string format
+ */
+
+/**
+ * A DAG node representing an Event descriptor
+ */
 class EventNode {
+  /**
+   * Create a new EventNode.
+   *
+   * @param {string|CID} topicCID - Topic CID or base58 string for this event
+   * @param {external:PeerId} author
+   * @param {Buffer} payload - Message to publish
+   * @param {object} [options={}]
+   * @param {string} [options.parent] - Parent event base58 string
+   * @param {string} [options.publisher] - Base58 string id of the publisher node
+   * @param {object} [options.metadata={}] - Metadata options
+   */
   constructor(topicCID, author, payload, options = {}) {
     // TODO check it is a CID maybe?
     assert(topicCID, 'Need a topicCID object to create an event node')
     assert(author, 'Need an author to create an event node')
     assert(payload, 'Need a payload to create an event node')
 
-    this.topicCID = topicCID
-    this.author = author
-    this.payload = payload
-    this.publisher = options.publisher
-    this.parent = options.parent
+    /**
+     * Topic CID
+     *
+     * @type {CID}
+     */
+    this.topicCID = topicCID ? new CID(topicCID) : null
 
+    /**
+     * Author PeerId
+     *
+     * @type external:PeerId
+     */
+    this.author = author
+
+    /**
+     * The payload of the event
+     *
+     * @type Buffer
+     */
+    this.payload = payload
+
+    /**
+     * Publisher PeerId
+     *
+     * @type external:PeerId
+     */
+    this.publisher = options.publisher
+
+    /**
+     * Parent event
+     *
+     * @type {CID}
+     */
+    this.parent = options.parent ? new CID(options.parent) : null
+
+    /**
+     * Event metadata
+     *
+     * @type {object}
+     * @property {Date} created
+     * @property {string} protocolVersion
+     */
     this.metadata = createMetadata(options.metadata)
   }
 
+  /**
+   * Is the event published
+   *
+   * @type {boolean}
+   */
+  get isPublished() {
+    return Boolean(this.publisher)
+  }
+
+  /**
+   * Deserialize a given event and create an EventNode
+   *
+   * @param {SerializedEvent} event
+   * @static
+   * @returns {EventNode}
+   */
   static deserialize(event) {
     const topicCID = linkUnmarshalling(event.topic)
     const publisher = event.publisher
@@ -40,17 +136,27 @@ class EventNode {
     })
   }
 
-  static deserializeCBOR(event, cb) {
+  /**
+   * Deserialize a given CBOR buffer representing an event and create an EventNode
+   *
+   * @param {SerializedEvent} event
+   * @param {function(Error, EventNode)} callback
+   * @static
+   * @returns {void}
+   */
+  static deserializeCBOR(event, callback) {
     dagCBOR.util.deserialize(event, (err, result) => {
-      if (err) return cb(err)
-      cb(null, EventNode.deserialize(result))
+      if (err) return callback(err)
+      callback(null, EventNode.deserialize(result))
     })
   }
 
-  get isPublished() {
-    return Boolean(this.publisher)
-  }
-
+  /**
+   * Return an object representing en event in readable format
+   * with string representations of the buffers
+   *
+   * @returns {ReadableEvent}
+   */
   getReadableFormat() {
     return {
       topicCID: this.topicCID.toBaseEncodedString(),
@@ -63,10 +169,21 @@ class EventNode {
     }
   }
 
-  getCID(cb) {
-    dagCBOR.util.cid(this.serialize(), cb)
+  /**
+   * Get the event CID
+   *
+   * @param {function(Error, CID)} callback
+   * @returns {void}
+   */
+  getCID(callback) {
+    dagCBOR.util.cid(this.serialize(), callback)
   }
 
+  /**
+   * Serialize this event
+   *
+   * @returns {SerializedEvent}
+   */
   serialize() {
     return {
       topic: linkMarshalling(this.topicCID),
@@ -81,9 +198,15 @@ class EventNode {
     }
   }
 
-  serializeCBOR(cb) {
+  /**
+   * Serialize this event to a CBOR buffer representation
+   *
+   * @param {function(Error, Buffer)} callback
+   * @returns {void}
+   */
+  serializeCBOR(callback) {
     const serialized = this.serialize()
-    dagCBOR.util.serialize(serialized, cb)
+    dagCBOR.util.serialize(serialized, callback)
   }
 }
 
