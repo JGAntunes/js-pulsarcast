@@ -6,7 +6,7 @@
 
 A JS implementation of [Pulsarcast](https://github.com/JGAntunes/pulsarcast)
 
-**Keep in mind that this module is still under heavy construction :hammer:**
+**Keep in mind that this module is quite alpha :hammer:**
 
 ## Install
 
@@ -16,11 +16,35 @@ npm install pulsarcast
 
 ## Usage
 
-:hammer: WIP :hammer:
+```javascript
+const Pulsarcast = require('pulsarcast')
+
+// node is Libp2p Node
+const pulsarcastNode = new Pulsarcast(node)
+
+const pulsarcastNode.start((err) => {
+  if (err) console.log('No!!!', err)
+  
+  pulsarcastNode.createTopic('fuuuuun', (err, cid, topicNode) => {
+    if (err) console.log('No!!!', err)
+    
+    console.log('Our new topic \o/', topicNode)
+    
+    pulsarcastNode.on(cid.toBaseEncodedString(), (eventNode) => {
+      console.log('event', eventNode)
+    })
+    
+    pulsarcastNode.publish(cid.toBaseEncodedString(), new Buffer('yolo!'), (err, eventCID) => {
+      if (err) console.log('No!!!', err)
+      console.log('published', eventCID.toBaseEncodedString())
+    })
+  })
+})
+```
 
 ## API
 
-:hammer: WIP :hammer:
+Check the [API documentation](./docs/api.md)
 
 ## Notes
 

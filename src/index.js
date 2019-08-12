@@ -17,32 +17,81 @@ const Peer = require('./peer')
 const EventNode = require('./dag/event-node')
 const TopicNode = require('./dag/topic-node')
 
+/**
+ * CID (Content Identifier)
+ *
+ * @external CID
+ * @see {@link https://github.com/multiformats/js-cid#api}
+ */
+
+/**
+ * Libp2p node
+ *
+ * @external Libp2pNode
+ * @see {@link https://github.com/libp2p/js-libp2p#api}
+ */
+
+/**
+ * A Javascript implementation of Pulsarcast
+ *
+ * See design and specs at https://github.com/JGAntunes/pulsarcast
+ */
 class Pulsarcast extends EventEmitter {
+  /**
+   * Create a new PulsarCast node.
+   *
+   * @param {external:Libp2pNode} libp2p
+   * @param {object} [options={}] - PulsarCast options
+   */
   constructor(libp2p, options = {}) {
     super()
 
+    /**
+     * Local ref to the libp2p node.
+     *
+     * @type {external:Libp2pNode}
+     */
     this.libp2p = libp2p
+
+    /**
+     * Node current status info.
+     *
+     * @type boolean
+     */
     this.started = false
 
     /**
      * Map of peers.
      *
-     * @type {Map<string, Peer>}
+     * @type {Map.<string, Peer>}
      */
     this.peers = new Map()
 
+    /**
+     * Map of topics.
+     *
+     * @type {Map.<string, TopicNode>}
+     */
     this.topics = new Map()
 
     /**
      * List of our subscriptions
-     * @type {Set<string>}
+     * @type {Set.<string>}
      */
     this.subscriptions = new Set()
 
-    // Our event trees
+    /**
+     * Map of the event dissemination trees.
+     *
+     * @type {Map.<string, EventTree>}
+     */
     this.eventTrees = new Map()
 
-    // This will store the peer neighbours
+    /**
+     * This node peer object.
+     *
+     * @type {Peer}
+     */
     this.me = new Peer(libp2p.peerInfo)
 
     this._onConnection = this._onConnection.bind(this)
@@ -246,6 +295,12 @@ class Pulsarcast extends EventEmitter {
     })
   }
 
+  /**
+   * Start the PulsarCast node
+   *
+   * @param {function(Error)} callback
+   * @return {void}
+   */
   start(callback) {
     log('Starting PulsarCast')
     if (this.started) {
@@ -259,6 +314,12 @@ class Pulsarcast extends EventEmitter {
     setImmediate(callback)
   }
 
+  /**
+   * Stop the PulsarCast node
+   *
+   * @param {function(Error)} callback
+   * @return {void}
+   */
   stop(callback) {
     if (!this.started) {
       return setImmediate(() => callback(new Error('not started yet')))
@@ -281,6 +342,14 @@ class Pulsarcast extends EventEmitter {
     )
   }
 
+  /**
+   * Publish a message in the specified topic
+   *
+   * @param {string} topicB58Str - topic base58 string
+   * @param {Buffer} message - message to publish
+   * @param {function(Error)} callback
+   * @return {void}
+   */
   publish(topicB58Str, message, callback) {
     assert(this.started, 'Pulsarcast is not started')
 
@@ -307,6 +376,13 @@ class Pulsarcast extends EventEmitter {
     )
   }
 
+  /**
+   * Subscribe to a specific topic
+   *
+   * @param {string} topicB58Str - topic base58 string
+   * @param {function(Error, TopicNode)} callback
+   * @return {void}
+   */
   subscribe(topicB58Str, callback) {
     assert(this.started, 'Pulsarcast is not started')
     const topicCID = new CID(topicB58Str)
@@ -335,6 +411,12 @@ class Pulsarcast extends EventEmitter {
     )
   }
 
+  /**
+   * Unsubscribe from a specific topic
+   *
+   * @param {string} topicB58Str - topic base58 string
+   * @param {function(Error)} callback
+   */
   unsubscribe(topicB58Str, callback) {
     assert(this.started, 'Pulsarcast is not started')
 
@@ -361,6 +443,20 @@ class Pulsarcast extends EventEmitter {
     )
   }
 
+  /**
+   * Create a topic
+   *
+   * @param {string} topicName - topic name
+   * @param {object} [options={}] - Topic creation options
+   * @param {string} [options.parent=null] - Parent topic base58 string
+   * @param {object.<string, string>} [options.subTopics={}] - Sub topics map, with names as keys and base58 strings as values
+   * @param {object} [options.metadata={}] - Metadata options
+   * @param {array.<string>} [options.metadata.allowedPublishers] - Allowed publishers (defaults to only this node)
+   * @param {boolean} [options.metadata.requestToPublish=true] - Allow other nodes to request to publish
+   * @param {string} [options.metadata.eventLinking=LAST_SEEN] - Method used for linking events
+   * @param {function(Error, CID, TopicNode)} callback
+   * @return {void}
+   */
   createTopic(topicName, options, callback) {
     assert(this.started, 'Pulsarcast is not started')
 
@@ -382,17 +478,6 @@ class Pulsarcast extends EventEmitter {
     const topicOptions = { ...defaultTopicOptions, ...options }
     const topicNode = new TopicNode(topicName, myId, topicOptions)
     this.rpc.send.topic.new(topicNode, callback)
-  }
-
-  updateTopic(topicB58Str, options, callback) {
-    assert(this.started, 'Pulsarcast is not started')
-
-    log.trace('Requesting update to topic %j', {
-      command: 'update-topic',
-      topic: topicB58Str
-    })
-
-    // TODO this will be an IPNS update
   }
 }
 
