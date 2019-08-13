@@ -52,6 +52,13 @@ Currently we're still relying on a couple of forks from `libp2p`/`ipfs` projects
 
 **Browser support** is still no guaranteed. All of the testing and development is currently being done on NodeJS only, although the plan is to have this done for the browser also :+1:
 
+## Supporters
+
+This module and relevant work detailed in the [Pulsarcast](https://github.com/JGAntunes/pulsarcast) spec has been developed by [me](https://jgantunes.com) with the amazing support and supervision of [Luís Veiga](https://www.gsd.inesc-id.pt/~lveiga/), in [INESC-ID Lisboa (Distributed Systems Group)](https://www.gsd.inesc-id.pt/) and [Instituto Superior Técnico, Universidade de Lisboa](https://tecnico.ulisboa.pt/)
+
+A special thank you note to [Microsoft Azure](https://azure.microsoft.com/en-us/) for sponsoring the tests for this project by providing crucial infrastructure support.
+
+
 ## License
 
 MIT
