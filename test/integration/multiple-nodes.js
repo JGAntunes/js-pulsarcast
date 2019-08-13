@@ -162,7 +162,8 @@ describe('multiple nodes', function() {
         node.subscribe(topicB58Str, (err, topicNode) => {
           expect(err).to.not.exist
           expect(topicNode).to.be.an.instanceof(TopicNode)
-          expect(node.subscriptions.size).to.equal(1)
+          // Subscribed to meta by default
+          expect(node.subscriptions.size).to.equal(2)
           expect(node.subscriptions.has(topicCID.toBaseEncodedString())).to.be
             .true
           expect(topicNode.serialize()).to.deep.equal(topic.serialize())
@@ -178,7 +179,33 @@ describe('multiple nodes', function() {
     )
   })
 
+  it(`subscribes one node to the created topic, but not its meta`, done => {
+    const topicB58Str = topicCID.toBaseEncodedString()
+    const node = nodes[subscriberNum + subscriber + 1]
+
+    node.subscribe(
+      topicB58Str,
+      { subscribeToMeta: false },
+      (err, topicNode) => {
+        expect(err).to.not.exist
+        expect(topicNode).to.be.an.instanceof(TopicNode)
+        expect(node.subscriptions.size).to.equal(1)
+        expect(node.subscriptions.has(topicCID.toBaseEncodedString())).to.be
+          .true
+        expect(topicNode.serialize()).to.deep.equal(topic.serialize())
+
+        // Check tree
+        const { parents } = node.me.trees.get(topicB58Str)
+        expect(parents).to.have.lengthOf.above(0)
+        expect(parents[0].trees.get(topicB58Str).children).to.include(node.me)
+        done()
+      }
+    )
+  })
+
   it('publishes a message from the non author node', done => {
+    const publisherNode = nodes[publisher]
+    const subscriberNode = nodes[subscriber]
     const topicB58Str = topicCID.toBaseEncodedString()
     const message = 'foobar'
     // Helper func to run all the expects
@@ -202,18 +229,17 @@ describe('multiple nodes', function() {
       expect(eventNode.topicCID.equals(topicCID)).to.be.true
       expect(eventNode.payload.toString()).to.be.equal(message)
       // Should match subscribed author
-      expect(eventNode.author.isEqual(nodes[subscriber].me.info.id)).to.be.true
+      expect(eventNode.author.isEqual(subscriberNode.me.info.id)).to.be.true
       // Should match topic author
-      expect(eventNode.publisher.isEqual(nodes[publisher].me.info.id)).to.be
-        .true
+      expect(eventNode.publisher.isEqual(publisherNode.me.info.id)).to.be.true
 
       checkAllDone()
     }
     // Setup event listeners
-    nodes[subscriber].once(topicB58Str, listener)
-    nodes[publisher].once(topicB58Str, listener)
+    subscriberNode.once(topicB58Str, listener)
+    publisherNode.once(topicB58Str, listener)
 
-    nodes[subscriber].publish(
+    subscriberNode.publish(
       topicB58Str,
       message,
       (err, eventCID, topicNode, eventNode) => {
@@ -222,8 +248,7 @@ describe('multiple nodes', function() {
         expect(topicNode).to.be.an.instanceof(TopicNode)
         expect(eventNode.topicCID.equals(topicCID)).to.be.true
         expect(eventNode.payload.toString()).to.be.equal(message)
-        expect(eventNode.author.isEqual(nodes[subscriber].me.info.id)).to.be
-          .true
+        expect(eventNode.author.isEqual(subscriberNode.me.info.id)).to.be.true
         // Should be a request to publish
         expect(eventCID).to.be.null
         expect(eventNode.isPublished).to.be.false
@@ -235,16 +260,39 @@ describe('multiple nodes', function() {
 
   it('unsubscribe from the topic', done => {
     const topicB58Str = topicCID.toBaseEncodedString()
-    nodes[subscriber].unsubscribe(topicB58Str, err => {
+    const publisherNode = nodes[publisher]
+    const subscriberNode = nodes[subscriber]
+
+    subscriberNode.unsubscribe(topicB58Str, err => {
       expect(err).to.not.exist
 
-      expect(nodes[subscriber].subscriptions.size).to.equal(0)
+      expect(subscriberNode.subscriptions.size).to.equal(0)
 
       eventually(() => {
-        const topicChildren = nodes[publisher].me.trees.get(topicB58Str)
-          .children
+        const topicChildren = publisherNode.me.trees.get(topicB58Str).children
         expect(
-          topicChildren.find(peer => peer.info.id.isEqual(nodes[1].me.info.id))
+          topicChildren.find(peer =>
+            peer.info.id.isEqual(subscriberNode.me.info.id)
+          )
+        ).to.not.exist
+      }, done)
+    })
+  })
+
+  it('unsubscribe from the topic but not its meta', done => {
+    const topicB58Str = topicCID.toBaseEncodedString()
+    const publisherNode = nodes[publisher]
+    const node = nodes[subscriber + 1]
+
+    node.unsubscribe(topicB58Str, { unsubscribeFromMeta: false }, err => {
+      expect(err).to.not.exist
+
+      expect(node.subscriptions.size).to.equal(1)
+
+      eventually(() => {
+        const topicChildren = publisherNode.me.trees.get(topicB58Str).children
+        expect(
+          topicChildren.find(peer => peer.info.id.isEqual(node.me.info.id))
         ).to.not.exist
       }, done)
     })
@@ -252,7 +300,7 @@ describe('multiple nodes', function() {
 
   it('dissemination tress are cleaned up on connection close', done => {
     const topicB58Str = topicCID.toBaseEncodedString()
-    const droppingNode = nodes[subscriber + 1]
+    const droppingNode = nodes[subscriber + 2]
     const droppingNodeId = droppingNode.me.info.id.toB58String()
     const { parents, children } = droppingNode.me.trees.get(topicB58Str)
 

@@ -68,7 +68,7 @@ See design and specs at https://github.com/JGAntunes/pulsarcast
     * [.start(callback)](#Pulsarcast+start) ⇒ <code>void</code>
     * [.stop(callback)](#Pulsarcast+stop) ⇒ <code>void</code>
     * [.publish(topicB58Str, message, callback)](#Pulsarcast+publish) ⇒ <code>void</code>
-    * [.subscribe(topicB58Str, callback)](#Pulsarcast+subscribe) ⇒ <code>void</code>
+    * [.subscribe(topicB58Str, [options], callback)](#Pulsarcast+subscribe) ⇒ <code>void</code>
     * [.unsubscribe(topicB58Str, callback)](#Pulsarcast+unsubscribe)
     * [.createTopic(topicName, [options], callback)](#Pulsarcast+createTopic) ⇒ <code>void</code>
 
@@ -162,15 +162,17 @@ Publish a message in the specified topic
 
 <a name="Pulsarcast+subscribe"></a>
 
-### pulsarcast.subscribe(topicB58Str, callback) ⇒ <code>void</code>
+### pulsarcast.subscribe(topicB58Str, [options], callback) ⇒ <code>void</code>
 Subscribe to a specific topic
 
 **Kind**: instance method of [<code>Pulsarcast</code>](#Pulsarcast)  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| topicB58Str | <code>string</code> | topic base58 string |
-| callback | <code>function</code> |  |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| topicB58Str | <code>string</code> |  | topic base58 string |
+| [options] | <code>object</code> | <code>{}</code> |  |
+| [options.subscribeToMeta] | <code>object</code> | <code>true</code> | optionally subscribe to this topic meta updates (updates to the topic descriptor) |
+| callback | <code>function</code> |  |  |
 
 <a name="Pulsarcast+unsubscribe"></a>
 
@@ -179,10 +181,11 @@ Unsubscribe from a specific topic
 
 **Kind**: instance method of [<code>Pulsarcast</code>](#Pulsarcast)  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| topicB58Str | <code>string</code> | topic base58 string |
-| callback | <code>function</code> |  |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| topicB58Str | <code>string</code> |  | topic base58 string |
+| [options.unsubscribeFromMeta] | <code>object</code> | <code>true</code> | optionally unsubscribe from this topic meta updates (updates to the topic descriptor) |
+| callback | <code>function</code> |  |  |
 
 <a name="Pulsarcast+createTopic"></a>
 

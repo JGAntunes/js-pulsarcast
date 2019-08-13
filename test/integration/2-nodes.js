@@ -132,7 +132,8 @@ describe('2 nodes', () => {
     nodes[1].subscribe(topicB58Str, (err, topicNode) => {
       expect(err).to.not.exist
       expect(topicNode).to.be.an.instanceof(TopicNode)
-      expect(nodes[1].subscriptions.size).to.equal(1)
+      // Subscribed to meta by default
+      expect(nodes[1].subscriptions.size).to.equal(2)
       expect(nodes[1].subscriptions.has(topicCID.toBaseEncodedString())).to.be
         .true
       expect(topicNode.serialize()).to.deep.equal(topic.serialize())

@@ -380,12 +380,26 @@ class Pulsarcast extends EventEmitter {
    * Subscribe to a specific topic
    *
    * @param {string} topicB58Str - topic base58 string
+   * @param {object} [options={}]
+   * @param {object} [options.subscribeToMeta=true] - optionally subscribe to this topic meta updates (updates to the topic descriptor)
    * @param {function(Error, TopicNode)} callback
    * @return {void}
    */
-  subscribe(topicB58Str, callback) {
+  subscribe(topicB58Str, options, callback) {
     assert(this.started, 'Pulsarcast is not started')
+    if (!callback) {
+      callback = options
+      options = {}
+    }
+
     const topicCID = new CID(topicB58Str)
+
+    // By default subscribe to meta topic
+    const defaultSubscribeOptions = {
+      subscribeToMeta: true
+    }
+
+    const subscribeOptions = { ...defaultSubscribeOptions, ...options }
 
     if (this.subscriptions.has(topicB58Str)) {
       log.trace('Already subscribed to topic %j', {
@@ -407,6 +421,7 @@ class Pulsarcast extends EventEmitter {
     this.rpc.receive.topic.join(
       this.me.info.id.toB58String(),
       topicCID,
+      subscribeOptions,
       callback
     )
   }
@@ -415,10 +430,22 @@ class Pulsarcast extends EventEmitter {
    * Unsubscribe from a specific topic
    *
    * @param {string} topicB58Str - topic base58 string
+   * @param {object} [options.unsubscribeFromMeta=true] - optionally unsubscribe from this topic meta updates (updates to the topic descriptor)
    * @param {function(Error)} callback
    */
-  unsubscribe(topicB58Str, callback) {
+  unsubscribe(topicB58Str, options, callback) {
     assert(this.started, 'Pulsarcast is not started')
+    if (!callback) {
+      callback = options
+      options = {}
+    }
+
+    // By default unsubscribe to meta topic
+    const defaultUnsubscribeOptions = {
+      unsubscribeFromMeta: true
+    }
+
+    const unsubscribeOptions = { ...defaultUnsubscribeOptions, ...options }
 
     if (!this.subscriptions.has(topicB58Str)) {
       log.trace('Not subscribed to topic %j', {
@@ -439,6 +466,7 @@ class Pulsarcast extends EventEmitter {
     this.rpc.receive.topic.leave(
       this.me.info.id.toB58String(),
       topicCID,
+      unsubscribeOptions,
       callback
     )
   }

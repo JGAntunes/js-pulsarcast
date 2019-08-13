@@ -1,7 +1,7 @@
 'use strict'
 
 const Joi = require('joi')
-const { eachLimit } = require('async')
+const { waterfall, eachLimit } = require('async')
 
 const log = require('../utils/logger')
 const { getTopic } = require('../utils/dht-helpers')
@@ -124,7 +124,7 @@ function createRPCHandlers(pulsarcastNode) {
     peers.get(idB58Str).updateTree(topicCID, peerTree)
   }
 
-  function join(idB58Str, topicCID, callback) {
+  function join(idB58Str, topicCID, options = {}, callback) {
     const { me, peers } = pulsarcastNode
     const topicB58Str = topicCID.toBaseEncodedString()
 
@@ -150,11 +150,27 @@ function createRPCHandlers(pulsarcastNode) {
           return callback(null, topicNode)
       }
 
-      pulsarcastNode.rpc.send.topic.join(topicNode, callback)
+      const metaTopicCID = topicNode.subTopics.meta
+      waterfall(
+        [
+          cb => {
+            if (!options.subscribeToMeta || !metaTopicCID) {
+              return setImmediate(cb)
+            }
+            // We want to subcribe to meta topic and it exists
+            pulsarcastNode.subscribe(metaTopicCID.toBaseEncodedString(), err =>
+              cb(err)
+            )
+          },
+          // Fwd the join commands up
+          cb => pulsarcastNode.rpc.send.topic.join(topicNode, cb)
+        ],
+        callback
+      )
     })
   }
 
-  function leave(idB58Str, topicCID, callback) {
+  function leave(idB58Str, topicCID, options = {}, callback) {
     const { me, peers } = pulsarcastNode
     const topicB58Str = topicCID.toBaseEncodedString()
     const myId = me.info.id
@@ -180,15 +196,32 @@ function createRPCHandlers(pulsarcastNode) {
         // Got no tree to clean up
         if (!tree) return callback()
 
-        // Need to forward the leave rpc
         const peers = tree.children.concat(tree.parents)
-        return eachLimit(
-          peers,
-          20,
-          (peer, done) => {
-            pulsarcastNode.rpc.send.topic.leave(topicNode, peer, done)
-          },
-          err => callback(err)
+        const metaTopicCID = topicNode.subTopics.meta
+        return waterfall(
+          [
+            cb => {
+              if (!options.unsubscribeFromMeta || !metaTopicCID) {
+                return setImmediate(cb)
+              }
+              // We want to unsubcribe from meta topic and it exists
+              pulsarcastNode.unsubscribe(
+                metaTopicCID.toBaseEncodedString(),
+                err => cb(err)
+              )
+            },
+            // Need to forward the leave rpc
+            cb =>
+              eachLimit(
+                peers,
+                20,
+                (peer, done) => {
+                  pulsarcastNode.rpc.send.topic.leave(topicNode, peer, done)
+                },
+                err => cb(err)
+              )
+          ],
+          callback
         )
       }
 
@@ -247,9 +280,9 @@ function createRPCHandlers(pulsarcastNode) {
       case ops.REQUEST_TO_PUBLISH:
         return requestToPublish(idB58Str, jsonMessage.event, errorHandler)
       case ops.JOIN_TOPIC:
-        return join(idB58Str, jsonMessage.topicId, errorHandler)
+        return join(idB58Str, jsonMessage.topicId, {}, errorHandler)
       case ops.LEAVE_TOPIC:
-        return leave(idB58Str, jsonMessage.topicId, errorHandler)
+        return leave(idB58Str, jsonMessage.topicId, {}, errorHandler)
     }
   }
 }
