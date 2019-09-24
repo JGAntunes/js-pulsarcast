@@ -148,6 +148,11 @@ function createRPCHandlers(pulsarcastNode) {
         // Check if we have a set of parents for this topic
         if (me.trees.get(topicB58Str).parents > 0)
           return callback(null, topicNode)
+      } else {
+        // We're subscribing to a topic we own
+        if (me.info.id.isEqual(topicNode.author)) {
+          return callback(null, topicNode)
+        }
       }
 
       const metaTopicCID = topicNode.subTopics.meta
