@@ -40,7 +40,7 @@ const { linkUnmarshalling, linkMarshalling } = require('./utils')
  * @property {string} name - The topic name
  * @property {string} author -  The topic author base58 id
  * @property {string} parent -  The topic parent base58 id
- * @property {object.<string, string>} # -  The topic sub topics, were the keys are names and the values base58 representations of the topic
+ * @property {object.<string, string>} # -  The topic sub topics, where the keys are names and the values base58 representations of the topic
  * @property {object} metadata - Topic metadata object
  * @property {string} metadata.created - Date in ISO string format
  * @property {Array.<string>} metadata.allowedPublishers - Array of base58 peer ids allowed to publish
@@ -172,10 +172,16 @@ class TopicNode {
     const requestToPublish = Array.isArray(this.metadata.requestToPublish)
       ? this.metadata.requestToPublish.map(p => p.toB58String())
       : this.metadata.requestToPublish
+    const subTopics =
+      this.subTopics &&
+      Object.entries(this.subTopics)
+        .map(([name, cid]) => [name, cid.toBaseEncodedString()])
+        .reduce((obj, values) => ({ ...obj, [values[0]]: values[1] }), {})
     return {
       name: this.name,
       author: this.author.toB58String(),
       parent: this.parent && this.parent.toBaseEncodedString(),
+      subTopics,
       metadata: {
         ...this.metadata,
         allowedPublishers,
