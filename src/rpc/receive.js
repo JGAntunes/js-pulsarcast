@@ -74,10 +74,15 @@ function createRPCHandlers(pulsarcastNode) {
     const { me } = pulsarcastNode
     const myId = me.info.id
 
-    log.trace('Got request to publish  %j', eventNode)
-
     getTopic(dht, eventNode.topicCID, (err, topicNode) => {
       if (err) return callback(err)
+
+      log.trace('Got request to publish %j', {
+        rpc: true,
+        type: 'request-publish',
+        topic: eventNode.topicCID.toBaseEncodedString(),
+        from: idB58Str
+      })
 
       const { allowedPublishers, requestToPublish } = topicNode.metadata
 

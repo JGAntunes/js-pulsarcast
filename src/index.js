@@ -402,10 +402,10 @@ class Pulsarcast extends EventEmitter {
     const subscribeOptions = { ...defaultSubscribeOptions, ...options }
 
     if (this.subscriptions.has(topicB58Str)) {
-      log.trace('Already subscribed to topic %j', {
-        command: 'subscribe',
-        topic: topicB58Str
-      })
+      // log.trace('Already subscribed to topic %j', {
+      //   command: 'subscribe',
+      //   topic: topicB58Str
+      // })
       return this._getTopic(topicCID, (err, topicNode) => {
         callback(err, topicNode, topicCID)
       })
@@ -448,10 +448,10 @@ class Pulsarcast extends EventEmitter {
     const unsubscribeOptions = { ...defaultUnsubscribeOptions, ...options }
 
     if (!this.subscriptions.has(topicB58Str)) {
-      log.trace('Not subscribed to topic %j', {
-        command: 'unsubscribe',
-        topic: topicB58Str
-      })
+      // log.trace('Not subscribed to topic %j', {
+      //   command: 'unsubscribe',
+      //   topic: topicB58Str
+      // })
       return setImmediate(callback)
     }
 

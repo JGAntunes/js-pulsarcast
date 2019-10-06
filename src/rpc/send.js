@@ -53,7 +53,11 @@ function createRPCHandlers(pulsarcastNode) {
           )
         },
         (linkedEvent, cb) => {
-          if (!isNewEvent) return cb(null, null, linkedEvent)
+          if (!isNewEvent) {
+            return linkedEvent.getCID((err, eventCID) =>
+              cb(err, eventCID, linkedEvent)
+            )
+          }
 
           // Publish is being created at this node, not just forwardind,
           // so add it to DHT and propagate it through our whole topic tree
@@ -71,6 +75,13 @@ function createRPCHandlers(pulsarcastNode) {
         if (pulsarcastNode.subscriptions.has(topicB58Str)) {
           pulsarcastNode.emit(topicB58Str, linkedEvent)
         }
+        log.trace('Got publish %j', {
+          rpc: true,
+          type: 'publish',
+          subscribed: pulsarcastNode.subscriptions.has(topicB58Str),
+          topic: topicB58Str,
+          event: eventCID.toBaseEncodedString()
+        })
         // TODO handle publishing to an event we're not subscribed to
         if (!trees) return callback(null, eventCID, topicNode, linkedEvent)
         const { parents, children } = trees
