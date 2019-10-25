@@ -81,6 +81,8 @@ function createRPCHandlers(pulsarcastNode) {
         rpc: true,
         type: 'request-publish',
         topic: eventNode.topicCID.toBaseEncodedString(),
+        topicName: topicNode.name,
+        created: eventNode.metadata.created,
         from: idB58Str
       })
 

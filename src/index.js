@@ -353,11 +353,6 @@ class Pulsarcast extends EventEmitter {
   publish(topicB58Str, message, callback) {
     assert(this.started, 'Pulsarcast is not started')
 
-    log.trace('Publishing message %j', {
-      command: 'publish',
-      topic: topicB58Str
-    })
-
     let eventNode
     try {
       const payload = Buffer.isBuffer(message)
@@ -369,6 +364,13 @@ class Pulsarcast extends EventEmitter {
     } catch (e) {
       return setImmediate(callback, e)
     }
+
+    log.trace('Publishing message %j', {
+      command: 'publish',
+      topic: topicB58Str,
+      created: eventNode.metadata.created
+    })
+
     this.rpc.receive.event.publish(
       this.me.info.id.toB58String(),
       eventNode,

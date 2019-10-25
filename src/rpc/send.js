@@ -79,6 +79,8 @@ function createRPCHandlers(pulsarcastNode) {
           rpc: true,
           type: 'publish',
           subscribed: pulsarcastNode.subscriptions.has(topicB58Str),
+          topicName: topicNode.name,
+          created: eventNode.metadata.created,
           topic: topicB58Str,
           event: eventCID.toBaseEncodedString()
         })
