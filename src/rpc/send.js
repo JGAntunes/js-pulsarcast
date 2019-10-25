@@ -212,7 +212,12 @@ function createRPCHandlers(pulsarcastNode) {
           pulsarcastNode._addTopic(topicNode, (err, topicNode, topicCID) => {
             if (err) return cb(err)
 
+            // We created the topic, we're subscribed to it by default
             subscriptions.add(topicCID.toBaseEncodedString())
+            log.trace('Subscribing to topic %j', {
+              command: 'subscribe',
+              topic: topicCID.toBaseEncodedString()
+            })
             store(dht, topicNode, cb)
           })
         },
