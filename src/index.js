@@ -112,6 +112,19 @@ class Pulsarcast extends EventEmitter {
       }
     )
 
+    // TODO set this kind of logs behind a flag and with configurable period
+    setInterval(() => {
+      for (let [topicB58Str, tree] of this.me.trees.entries()) {
+        log.trace('Topic tree %j', {
+          tree: true,
+          topic: topicB58Str,
+          peerId: this.me.info.id.toB58String(),
+          children: tree.children.map(child => child.info.id.toB58String()),
+          parents: tree.parents.map(parent => parent.info.id.toB58String())
+        })
+      }
+    }, 30000)
+
     // Create our handlers to receive and send RPC messages
     this.rpc = createRpcHandlers(this)
   }
