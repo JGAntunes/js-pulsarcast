@@ -83,6 +83,7 @@ function createRPCHandlers(pulsarcastNode) {
         topic: eventNode.topicCID.toBaseEncodedString(),
         topicName: topicNode.name,
         created: eventNode.metadata.created,
+        latency: new Date() - eventNode.metadata.created,
         from: idB58Str
       })
 

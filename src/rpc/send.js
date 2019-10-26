@@ -81,6 +81,7 @@ function createRPCHandlers(pulsarcastNode) {
           subscribed: pulsarcastNode.subscriptions.has(topicB58Str),
           topicName: topicNode.name,
           created: eventNode.metadata.created,
+          latency: new Date() - eventNode.metadata.created,
           topic: topicB58Str,
           event: eventCID.toBaseEncodedString()
         })
