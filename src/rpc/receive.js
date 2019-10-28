@@ -34,7 +34,6 @@ function createRPCHandlers(pulsarcastNode) {
     // Publish is from this node so it's a new event
     const newEvent = myId.toB58String() === idB58Str
 
-    log.trace('Got publish %j', eventNode)
     getTopic(dht, eventNode.topicCID, (err, topicNode) => {
       if (err) return callback(err)
 
@@ -122,11 +121,16 @@ function createRPCHandlers(pulsarcastNode) {
   }
 
   function update(idB58Str, peerTree) {
-    // Only consider the emessage if we have data
+    // Only consider the message if we have data
     if (!peerTree) return
     const topicCID = peerTree.topicId.toBaseEncodedString()
 
-    log.trace('Got update  %j', peerTree)
+    log.trace('Got update  %j', {
+      rpc: true,
+      type: 'update',
+      topic: topicCID.toBaseEncodedString(),
+      from: idB58Str
+    })
 
     const { peers } = pulsarcastNode
     peers.get(idB58Str).updateTree(topicCID, peerTree)
@@ -140,7 +144,11 @@ function createRPCHandlers(pulsarcastNode) {
     // we received a message from it
     const child = peers.get(idB58Str)
 
-    log.trace('Got join  %j', topicCID)
+    log.trace('Got join  %j', {
+      rpc: true,
+      type: 'join',
+      topic: topicB58Str
+    })
 
     getTopic(dht, topicCID, (err, topicNode) => {
       if (err) return callback(err)
@@ -192,7 +200,11 @@ function createRPCHandlers(pulsarcastNode) {
     // we received a message from it
     const peer = peers.get(idB58Str)
 
-    log.trace('Got leave %j', topicCID)
+    log.trace('Got leave %j', {
+      rpc: true,
+      type: 'leave',
+      topic: topicB58Str
+    })
 
     getTopic(dht, topicCID, (err, topicNode) => {
       if (err) return callback(err)
