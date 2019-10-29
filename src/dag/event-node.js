@@ -28,7 +28,7 @@ const { linkUnmarshalling, linkMarshalling } = require('./utils')
  * @typedef {Object} ReadableEvent
  * @property {string} topicCID
  * @property {string} author -  The event author base58 id
- * @property {Buffer} payload -  Event payload
+ * @property {number} payloadSize -  Event payload size in bytes
  * @property {string} publisher -  The event publisher base58 id
  * @property {string} parent -  The event parent base58 id
  * @property {boolean} isPublished
@@ -160,7 +160,7 @@ class EventNode {
     return {
       topicCID: this.topicCID.toBaseEncodedString(),
       author: this.author.toB58String(),
-      payload: this.payload,
+      payloadSize: this.payload.length,
       publisher: this.publisher && this.publisher.toB58String(),
       parent: this.parent && this.parent.toBaseEncodedString(),
       isPublished: this.isPublished,

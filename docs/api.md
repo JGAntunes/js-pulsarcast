@@ -613,7 +613,7 @@ Human readable event representation
 | --- | --- | --- |
 | topicCID | <code>string</code> |  |
 | author | <code>string</code> | The event author base58 id |
-| payload | <code>Buffer</code> | Event payload |
+| payloadSize | <code>number</code> | Event payload size in bytes |
 | publisher | <code>string</code> | The event publisher base58 id |
 | parent | <code>string</code> | The event parent base58 id |
 | isPublished | <code>boolean</code> |  |
@@ -655,7 +655,7 @@ Human readable topic representation
 | name | <code>string</code> | The topic name |
 | author | <code>string</code> | The topic author base58 id |
 | parent | <code>string</code> | The topic parent base58 id |
-| # | <code>object.&lt;string, string&gt;</code> | The topic sub topics, were the keys are names and the values base58 representations of the topic |
+| # | <code>object.&lt;string, string&gt;</code> | The topic sub topics, where the keys are names and the values base58 representations of the topic |
 | metadata | <code>object</code> | Topic metadata object |
 | metadata.created | <code>string</code> | Date in ISO string format |
 | metadata.allowedPublishers | <code>Array.&lt;string&gt;</code> | Array of base58 peer ids allowed to publish |
