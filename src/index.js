@@ -144,7 +144,7 @@ class Pulsarcast extends EventEmitter {
     // Create a new peer and insert it in the map
     peer = new Peer(peerInfo, conn)
     // If connection closes, remove peer from list
-    peer.once('close', () => () => {
+    peer.once('close', () => {
       this.peers.delete(idB58Str)
     })
     // Insert peer in list
