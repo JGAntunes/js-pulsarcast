@@ -97,20 +97,20 @@ class Pulsarcast extends EventEmitter {
     this._onConnection = this._onConnection.bind(this)
 
     // Monitor pulsarcast messages for debug purposes
-    this.libp2p._switch.observer.on(
-      'message',
-      (peerId, transport, msgProtocol, direction, bufferLength) => {
-        if (msgProtocol === protocol) {
-          log.trace('message trace %j', {
-            peerId,
-            transport,
-            protocol,
-            direction,
-            bufferLength
-          })
-        }
-      }
-    )
+    // this.libp2p._switch.observer.on(
+    //   'message',
+    //   (peerId, transport, msgProtocol, direction, bufferLength) => {
+    //     if (msgProtocol === protocol) {
+    //       log.trace('message trace %j', {
+    //         peerId,
+    //         transport,
+    //         protocol,
+    //         direction,
+    //         bufferLength
+    //       })
+    //     }
+    //   }
+    // )
 
     // TODO set this kind of logs behind a flag and with configurable period
     setInterval(() => {
@@ -123,7 +123,7 @@ class Pulsarcast extends EventEmitter {
           parents: tree.parents.map(parent => parent.info.id.toB58String())
         })
       }
-    }, 30000)
+    }, 60 * 1000)
 
     // Create our handlers to receive and send RPC messages
     this.rpc = createRpcHandlers(this)
