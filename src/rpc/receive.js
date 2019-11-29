@@ -9,8 +9,6 @@ const { protobuffers, schemas, marshalling } = require('../messages')
 const ops = protobuffers.RPC.Operation
 
 function createRPCHandlers(pulsarcastNode) {
-  const dht = pulsarcastNode.libp2p._dht
-
   return {
     update,
     topic: {
@@ -72,7 +70,7 @@ function createRPCHandlers(pulsarcastNode) {
     const { me } = pulsarcastNode
     const myId = me.info.id
 
-    pulsarcastNode._getTopic(dht, eventNode.topicCID, (err, topicNode) => {
+    pulsarcastNode._getTopic(eventNode.topicCID, (err, topicNode) => {
       if (err) return callback(err)
 
       log.trace('Got request to publish %j', {
@@ -149,7 +147,7 @@ function createRPCHandlers(pulsarcastNode) {
       topic: topicB58Str
     })
 
-    pulsarcastNode._getTopic(dht, topicCID, (err, topicNode) => {
+    pulsarcastNode._getTopic(topicCID, (err, topicNode) => {
       if (err) return callback(err)
       // The join command did not originate at this node
       if (idB58Str !== me.info.id.toB58String()) {
@@ -205,7 +203,7 @@ function createRPCHandlers(pulsarcastNode) {
       topic: topicB58Str
     })
 
-    pulsarcastNode._getTopic(dht, topicCID, (err, topicNode) => {
+    pulsarcastNode._getTopic(topicCID, (err, topicNode) => {
       if (err) return callback(err)
 
       // The leave command originated at this node
