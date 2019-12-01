@@ -5,7 +5,7 @@ const { eachLimit, waterfall } = require('async')
 const EventTree = require('../dag/event-tree')
 const TopicNode = require('../dag/topic-node')
 const { createRPC, marshalling, protobuffers } = require('../messages')
-const log = require('../utils/logger')
+// const log = require('../utils/logger')
 const { closestPeerToPeer, store } = require('../utils/dht-helpers')
 
 const RPC = protobuffers.RPC

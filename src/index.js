@@ -330,7 +330,7 @@ class Pulsarcast extends EventEmitter {
   }
 
   _retryConnection(attemptNumber, peer, callback) {
-    const idB58Str = peer.info.id.toB58String()
+    // const idB58Str = peer.info.id.toB58String()
     // Let's dial to it
     // log.trace('Redialing peer %j', { peer: idB58Str })
     this.libp2p.dialProtocol(peer.info.id, protocol, (err, conn) => {
