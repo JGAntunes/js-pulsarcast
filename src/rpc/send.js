@@ -75,16 +75,16 @@ function createRPCHandlers(pulsarcastNode) {
         if (pulsarcastNode.subscriptions.has(topicB58Str)) {
           pulsarcastNode.emit(topicB58Str, linkedEvent)
         }
-        log.trace('Got publish %j', {
-          rpc: true,
-          type: 'publish',
-          subscribed: pulsarcastNode.subscriptions.has(topicB58Str),
-          topicName: topicNode.name,
-          created: eventNode.metadata.created,
-          latency: new Date() - eventNode.metadata.created,
-          topic: topicB58Str,
-          event: eventCID.toBaseEncodedString()
-        })
+        // log.trace('Got publish %j', {
+        //   rpc: true,
+        //   type: 'publish',
+        //   subscribed: pulsarcastNode.subscriptions.has(topicB58Str),
+        //   topicName: topicNode.name,
+        //   created: eventNode.metadata.created,
+        //   latency: new Date() - eventNode.metadata.created,
+        //   topic: topicB58Str,
+        //   event: eventCID.toBaseEncodedString()
+        // })
         // TODO handle publishing to an event we're not subscribed to
         if (!trees) return callback(null, eventCID, topicNode, linkedEvent)
         const { parents, children } = trees
@@ -217,10 +217,10 @@ function createRPCHandlers(pulsarcastNode) {
 
             // We created the topic, we're subscribed to it by default
             subscriptions.add(topicCID.toBaseEncodedString())
-            log.trace('Subscribing to topic %j', {
-              command: 'subscribe',
-              topic: topicCID.toBaseEncodedString()
-            })
+            // log.trace('Subscribing to topic %j', {
+            //   command: 'subscribe',
+            //   topic: topicCID.toBaseEncodedString()
+            // })
             store(dht, topicNode, cb)
           })
         },
@@ -243,11 +243,12 @@ function createRPCHandlers(pulsarcastNode) {
   }
 
   function send(peer, rpc) {
-    log.trace('Sending rpc %j', {
-      handler: 'out',
-      op: rpc.op,
-      to: peer.info.id.toB58String()
-    })
+    // log.trace('Sending rpc %j', {
+    //   handler: 'out',
+    //   op: rpc.op,
+    //   to: peer.info.id.toB58String()
+    // })
+    pulsarcastNode._stats.rpc.out++
 
     const rpcToSend = marshalling.marshall(rpc)
     const encodedMessage = RPC.encode({ msgs: [rpcToSend] })

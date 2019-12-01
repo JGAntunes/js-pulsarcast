@@ -73,15 +73,15 @@ function createRPCHandlers(pulsarcastNode) {
     pulsarcastNode._getTopic(eventNode.topicCID, (err, topicNode) => {
       if (err) return callback(err)
 
-      log.trace('Got request to publish %j', {
-        rpc: true,
-        type: 'request-publish',
-        topic: eventNode.topicCID.toBaseEncodedString(),
-        topicName: topicNode.name,
-        created: eventNode.metadata.created,
-        latency: new Date() - eventNode.metadata.created,
-        from: idB58Str
-      })
+      // log.trace('Got request to publish %j', {
+      //   rpc: true,
+      //   type: 'request-publish',
+      //   topic: eventNode.topicCID.toBaseEncodedString(),
+      //   topicName: topicNode.name,
+      //   created: eventNode.metadata.created,
+      //   latency: new Date() - eventNode.metadata.created,
+      //   from: idB58Str
+      // })
 
       const { allowedPublishers, requestToPublish } = topicNode.metadata
 
@@ -122,12 +122,12 @@ function createRPCHandlers(pulsarcastNode) {
     if (!peerTree) return
     const topicCID = peerTree.topicId.toBaseEncodedString()
 
-    log.trace('Got update  %j', {
-      rpc: true,
-      type: 'update',
-      topic: topicCID.toBaseEncodedString(),
-      from: idB58Str
-    })
+    // log.trace('Got update  %j', {
+    //   rpc: true,
+    //   type: 'update',
+    //   topic: topicCID.toBaseEncodedString(),
+    //   from: idB58Str
+    // })
 
     const { peers } = pulsarcastNode
     peers.get(idB58Str).updateTree(topicCID, peerTree)
@@ -141,11 +141,11 @@ function createRPCHandlers(pulsarcastNode) {
     // we received a message from it
     const child = peers.get(idB58Str)
 
-    log.trace('Got join  %j', {
-      rpc: true,
-      type: 'join',
-      topic: topicB58Str
-    })
+    // log.trace('Got join  %j', {
+    //   rpc: true,
+    //   type: 'join',
+    //   topic: topicB58Str
+    // })
 
     pulsarcastNode._getTopic(topicCID, (err, topicNode) => {
       if (err) return callback(err)
@@ -197,11 +197,11 @@ function createRPCHandlers(pulsarcastNode) {
     // we received a message from it
     const peer = peers.get(idB58Str)
 
-    log.trace('Got leave %j', {
-      rpc: true,
-      type: 'leave',
-      topic: topicB58Str
-    })
+    // log.trace('Got leave %j', {
+    //   rpc: true,
+    //   type: 'leave',
+    //   topic: topicB58Str
+    // })
 
     pulsarcastNode._getTopic(topicCID, (err, topicNode) => {
       if (err) return callback(err)
@@ -283,11 +283,12 @@ function createRPCHandlers(pulsarcastNode) {
     // with type coercion
     const jsonMessage = marshalling.unmarshall(result.value)
 
-    log.trace('Received rpc %j', {
-      handler: 'in',
-      op: jsonMessage.op,
-      from: idB58Str
-    })
+    // log.trace('Received rpc %j', {
+    //   handler: 'in',
+    //   op: jsonMessage.op,
+    //   from: idB58Str
+    // })
+    pulsarcastNode._stats.rpc.in++
     const errorHandler = err => {
       if (err) log.error('%j', err)
     }

@@ -41,9 +41,9 @@ class EventTree {
      */
     this.mostRecent = null
 
-    log.trace('New event tree %j', {
-      topic: topicNode.name
-    })
+    // log.trace('New event tree %j', {
+    //   topic: topicNode.name
+    // })
   }
 
   /**

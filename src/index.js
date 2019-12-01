@@ -113,16 +113,54 @@ class Pulsarcast extends EventEmitter {
     // )
 
     // TODO set this kind of logs behind a flag and with configurable period
+    this._stats = {
+      rpc: { in: 0, out: 0 }
+    }
     setInterval(() => {
+      // Topic tree state
       for (let [topicB58Str, tree] of this.me.trees.entries()) {
         log.trace('Topic tree %j', {
           tree: true,
           topic: topicB58Str,
-          peerId: this.me.info.id.toB58String(),
           children: tree.children.map(child => child.info.id.toB58String()),
           parents: tree.parents.map(parent => parent.info.id.toB58String())
         })
       }
+
+      // Event tree state
+      for (let [topicB58Str, tree] of this.eventTrees.entries()) {
+        log.trace('Events %j', {
+          events: true,
+          topic: topicB58Str,
+          size: tree.eventMap.size
+        })
+      }
+
+      // Subscriptions
+      log.trace('Subscriptions %j', {
+        subscriptions: true,
+        size: this.subscriptions.size
+      })
+
+      // Peers
+      log.trace('Peers %j', {
+        peers: true,
+        size: this.peers.size
+      })
+
+      // Protocol data
+      if (this.libp2p.stats.forProtocol(protocol)) {
+        log.trace('Libp2p protocol data %j', {
+          libp2pProtocol: true,
+          ...this.libp2p.stats.forProtocol(protocol).snapshot
+        })
+      }
+
+      // RPC IN/OUT
+      log.trace('RPC IN/OUT %j', {
+        rpc: true,
+        ...this._stats.rpc
+      })
     }, 60 * 1000)
 
     // Create our handlers to receive and send RPC messages
@@ -183,7 +221,7 @@ class Pulsarcast extends EventEmitter {
   _getTopic(topicCID, callback) {
     const topicB58Str = topicCID.toBaseEncodedString()
 
-    log.trace('Looking for topic %j', { topic: topicB58Str })
+    // log.trace('Looking for topic %j', { topic: topicB58Str })
 
     const topicNode = this.topics.get(topicB58Str)
     // We have the topic locally
@@ -209,7 +247,7 @@ class Pulsarcast extends EventEmitter {
   }
 
   _listenToPeerConn(idB58Str, conn, peer) {
-    log.trace('Listening to peer %j', { peer: idB58Str })
+    // log.trace('Listening to peer %j', { peer: idB58Str })
     pull(
       conn,
       lp.decode(),
@@ -238,7 +276,7 @@ class Pulsarcast extends EventEmitter {
       [
         // First close the stream and clean connection state
         done => {
-          log.trace('Closing connection to peer', { peer: idB58Str })
+          // log.trace('Closing connection to peer', { peer: idB58Str })
           peer.close(done)
         },
         done => {
@@ -294,7 +332,7 @@ class Pulsarcast extends EventEmitter {
   _retryConnection(attemptNumber, peer, callback) {
     const idB58Str = peer.info.id.toB58String()
     // Let's dial to it
-    log.trace('Redialing peer %j', { peer: idB58Str })
+    // log.trace('Redialing peer %j', { peer: idB58Str })
     this.libp2p.dialProtocol(peer.info.id, protocol, (err, conn) => {
       if (err) {
         if (attemptNumber < retryOnClose)
