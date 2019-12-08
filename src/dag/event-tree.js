@@ -2,8 +2,6 @@
 
 const assert = require('assert')
 
-const log = require('../utils/logger')
-
 // TODO right now memory usage grows indefinitely
 /**
  * A representation of an event tree for a given topic
@@ -39,10 +37,6 @@ class EventTree {
      * @type {EventNode}
      */
     this.mostRecent = null
-
-    // log.trace('New event tree %j', {
-    //   topic: topicNode.name
-    // })
   }
 
   /**
