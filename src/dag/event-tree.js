@@ -17,7 +17,6 @@ class EventTree {
    */
   constructor(topicNode) {
     assert(topicNode, 'Need a topicNode object to create an event tree')
-    log.trace(`New event tree for topic ${topicNode.name}`)
 
     /**
      * Topic node

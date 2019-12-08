@@ -5,7 +5,7 @@ const { eachLimit, waterfall } = require('async')
 const EventTree = require('../dag/event-tree')
 const TopicNode = require('../dag/topic-node')
 const { createRPC, marshalling, protobuffers } = require('../messages')
-// const log = require('../utils/logger')
+const log = require('../utils/logger')
 const { closestPeerToPeer, store } = require('../utils/dht-helpers')
 
 const RPC = protobuffers.RPC
@@ -73,6 +73,15 @@ function createRPCHandlers(pulsarcastNode) {
 
         // We're subscribed to this topic, emit the message
         if (pulsarcastNode.subscriptions.has(topicB58Str)) {
+          log.trace('Got event %j', {
+            rpc: true,
+            type: 'event',
+            topicName: topicNode.name,
+            created: eventNode.metadata.created,
+            latency: new Date() - eventNode.metadata.created,
+            topic: topicB58Str,
+            event: eventCID.toBaseEncodedString()
+          })
           pulsarcastNode.emit(topicB58Str, linkedEvent)
         }
         // log.trace('Got publish %j', {

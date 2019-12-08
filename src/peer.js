@@ -51,9 +51,9 @@ class Peer extends EventEmitter {
   }
 
   sendMessages(messages) {
-    log.trace('Pushing message to peer %j', {
-      peer: this.info.id.toB58String()
-    })
+    // log.trace('Pushing message to peer %j', {
+    //   peer: this.info.id.toB58String()
+    // })
     this.stream.push(messages)
   }
 
