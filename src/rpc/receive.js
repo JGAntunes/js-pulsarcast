@@ -151,6 +151,7 @@ function createRPCHandlers(pulsarcastNode) {
       if (err) return callback(err)
       // The join command did not originate at this node
       if (idB58Str !== me.info.id.toB58String()) {
+        const treeExists = Boolean(me.trees.get(topicB58Str))
         // Add this peer as a child to this topic tree
         me.addChildren(topicB58Str, [child])
         // Add me as a parent to this peer
@@ -158,9 +159,8 @@ function createRPCHandlers(pulsarcastNode) {
         // This node is the root node for the topic
         if (me.info.id.isEqual(topicNode.author))
           return callback(null, topicNode)
-        // Check if we have a set of parents for this topic
-        if (me.trees.get(topicB58Str).parents > 0)
-          return callback(null, topicNode)
+        // We already have neighbours for this topic
+        if (treeExists) return callback(null, topicNode)
       } else {
         // We're subscribing to a topic we own
         if (me.info.id.isEqual(topicNode.author)) {
