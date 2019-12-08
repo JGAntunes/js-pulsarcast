@@ -162,6 +162,10 @@ function createRPCHandlers(pulsarcastNode) {
         // We already have neighbours for this topic
         if (treeExists) return callback(null, topicNode)
       } else {
+        // FIXME right now we create an empty tree for this topic
+        // while the node joins to avoid race conditions and end up
+        // with 2 parents
+        me.addChildren(topicB58Str, [])
         // We're subscribing to a topic we own
         if (me.info.id.isEqual(topicNode.author)) {
           return callback(null, topicNode)

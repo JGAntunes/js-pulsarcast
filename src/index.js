@@ -123,7 +123,9 @@ class Pulsarcast extends EventEmitter {
           tree: true,
           topic: topicB58Str,
           children: tree.children.map(child => child.info.id.toB58String()),
-          parents: tree.parents.map(parent => parent.info.id.toB58String())
+          childrenSize: tree.children.size,
+          parents: tree.parents.map(parent => parent.info.id.toB58String()),
+          parentsSize: tree.parents.size
         })
       }
 
