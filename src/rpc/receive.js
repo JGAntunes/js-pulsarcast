@@ -149,9 +149,10 @@ function createRPCHandlers(pulsarcastNode) {
 
     pulsarcastNode._getTopic(topicCID, (err, topicNode) => {
       if (err) return callback(err)
+
+      const treeExists = Boolean(me.trees.get(topicB58Str))
       // The join command did not originate at this node
       if (idB58Str !== me.info.id.toB58String()) {
-        const treeExists = Boolean(me.trees.get(topicB58Str))
         // Add this peer as a child to this topic tree
         me.addChildren(topicB58Str, [child])
         // Add me as a parent to this peer
@@ -159,8 +160,6 @@ function createRPCHandlers(pulsarcastNode) {
         // This node is the root node for the topic
         if (me.info.id.isEqual(topicNode.author))
           return callback(null, topicNode)
-        // We already have neighbours for this topic
-        if (treeExists) return callback(null, topicNode)
       } else {
         // FIXME right now we create an empty tree for this topic
         // while the node joins to avoid race conditions and end up
@@ -185,7 +184,11 @@ function createRPCHandlers(pulsarcastNode) {
             )
           },
           // Fwd the join commands up
-          cb => pulsarcastNode.rpc.send.topic.join(topicNode, cb)
+          cb => {
+            // We already have neighbours for this topic
+            if (treeExists) return cb(null, topicNode)
+            pulsarcastNode.rpc.send.topic.join(topicNode, cb)
+          }
         ],
         callback
       )
