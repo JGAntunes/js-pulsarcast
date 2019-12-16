@@ -94,8 +94,15 @@ function createRPCHandlers(pulsarcastNode) {
         //   topic: topicB58Str,
         //   event: eventCID.toBaseEncodedString()
         // })
+
         // TODO handle publishing to an event we're not subscribed to
-        if (!trees) return callback(null, eventCID, topicNode, linkedEvent)
+        if (!trees) {
+          log.err(
+            `No trees for topic ${topicB58Str} %j`,
+            topicNode.getReadableFormat()
+          )
+          return callback(null, eventCID, topicNode, linkedEvent)
+        }
         const { parents, children } = trees
 
         const peers = [...parents, ...children]

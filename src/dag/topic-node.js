@@ -62,7 +62,7 @@ class TopicNode {
    * @param {string} [options.parent=null] - Parent topic base58 string
    * @param {object.<string, string>} [options.subTopics={}] - Sub topics map, with names as keys and base58 strings as values
    * @param {object} [options.metadata={}] - Metadata options
-   * @param {array.<string>} [options.metadata.allowedPublishers] - Allowed publishers (defaults to only this node)
+   * @param {array.<PeerId>} [options.metadata.allowedPublishers] - Allowed publishers (defaults to only this node)
    * @param {boolean} [options.metadata.requestToPublish=true] - Allow other nodes to request to publish
    * @param {string} [options.metadata.eventLinking=LAST_SEEN] - Method used for linking events
    */
@@ -264,15 +264,17 @@ function deserializeMetadata(metadata) {
 
   let requestToPublish
   if (!metadata.requestToPublish.enabled) requestToPublish = false
-  if (
-    metadata.requestToPublish.enabled &&
-    !metadata.requestToPublish.peers.length
-  )
-    requestToPublish = true
-  else
-    requestToPublish = metadata.requestToPublish.peers.map(peer =>
-      PeerId.createFromBytes(peer)
+  else {
+    if (
+      metadata.requestToPublish.enabled &&
+      !metadata.requestToPublish.peers.length
     )
+      requestToPublish = true
+    else
+      requestToPublish = metadata.requestToPublish.peers.map(peer =>
+        PeerId.createFromBytes(peer)
+      )
+  }
 
   return {
     ...metadata,
