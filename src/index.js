@@ -114,7 +114,7 @@ class Pulsarcast extends EventEmitter {
 
     // TODO set this kind of logs behind a flag and with configurable period
     this._stats = {
-      rpc: { in: 0, out: 0 }
+      rpc: { in: 0, out: 0, topics: {} }
     }
     setInterval(() => {
       // Topic tree state
@@ -165,9 +165,7 @@ class Pulsarcast extends EventEmitter {
         out: this._stats.rpc.out
       })
 
-      for (let [topicB58Str, stats] of Object.entries(
-        this._stats.rpc.topics || {}
-      )) {
+      for (let [topicB58Str, stats] of Object.entries(this._stats.rpc.topics)) {
         log.trace('RPC IN/OUT %j', {
           rpcTopics: true,
           topic: topicB58Str,
