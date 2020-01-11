@@ -264,7 +264,7 @@ function createRPCHandlers(pulsarcastNode) {
     //   op: rpc.op,
     //   to: peer.info.id.toB58String()
     // })
-    pulsarcastNode._stats.rpc.out++
+    setStats(rpc)
 
     const rpcToSend = marshalling.marshall(rpc)
     const encodedMessage = RPC.encode({ msgs: [rpcToSend] })
@@ -288,6 +288,17 @@ function createRPCHandlers(pulsarcastNode) {
 
     if (createLink) return eventTree.addNew(eventNode, cb)
     eventTree.add(eventNode, cb)
+  }
+
+  function setStats(rpc) {
+    pulsarcastNode._stats.rpc.out++
+    if (rpc.topicCID) {
+      const topicB58Str = rpc.topicCID.toBaseEncodedString()
+      if (!pulsarcastNode._stats.rpc.topics[topicB58Str]) {
+        pulsarcastNode._stats.rpc.topics[topicB58Str] = { in: 0, out: 0 }
+      }
+      pulsarcastNode._stats.rpc.topics[topicB58Str].out++
+    }
   }
 
   // function getEvent (topicCID, eventCID) {

@@ -295,7 +295,7 @@ function createRPCHandlers(pulsarcastNode) {
     //   op: jsonMessage.op,
     //   from: idB58Str
     // })
-    pulsarcastNode._stats.rpc.in++
+    setStats(jsonMessage)
     const errorHandler = err => {
       if (err) log.error('%j', err)
     }
@@ -313,6 +313,17 @@ function createRPCHandlers(pulsarcastNode) {
         return join(idB58Str, jsonMessage.topicId, {}, errorHandler)
       case ops.LEAVE_TOPIC:
         return leave(idB58Str, jsonMessage.topicId, {}, errorHandler)
+    }
+  }
+
+  function setStats(rpc) {
+    pulsarcastNode._stats.rpc.in++
+    if (rpc.topicCID) {
+      const topicB58Str = rpc.topicCID.toBaseEncodedString()
+      if (!pulsarcastNode._stats.rpc.topics[topicB58Str]) {
+        pulsarcastNode._stats.rpc.topics[topicB58Str] = { in: 0, out: 0 }
+      }
+      pulsarcastNode._stats.rpc.topics[topicB58Str].in++
     }
   }
 }

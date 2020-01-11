@@ -161,8 +161,19 @@ class Pulsarcast extends EventEmitter {
       // RPC IN/OUT
       log.trace('RPC IN/OUT %j', {
         rpc: true,
-        ...this._stats.rpc
+        in: this._stats.rpc.in,
+        out: this._stats.rpc.out
       })
+
+      for (let [topicB58Str, stats] of Object.entries(
+        this._stats.rpc.topics || {}
+      )) {
+        log.trace('RPC IN/OUT %j', {
+          rpcTopics: true,
+          topic: topicB58Str,
+          ...stats
+        })
+      }
     }, 60 * 1000)
 
     // Create our handlers to receive and send RPC messages
