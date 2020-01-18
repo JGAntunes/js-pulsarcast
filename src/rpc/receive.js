@@ -318,8 +318,8 @@ function createRPCHandlers(pulsarcastNode) {
 
   function setStats(rpc) {
     pulsarcastNode._stats.rpc.in++
-    if (rpc.topicCID) {
-      const topicB58Str = rpc.topicCID.toBaseEncodedString()
+    if (rpc.event) {
+      const topicB58Str = rpc.event.topicCID.toBaseEncodedString()
       if (!pulsarcastNode._stats.rpc.topics[topicB58Str]) {
         pulsarcastNode._stats.rpc.topics[topicB58Str] = { in: 0, out: 0 }
       }

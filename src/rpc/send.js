@@ -61,6 +61,7 @@ function createRPCHandlers(pulsarcastNode) {
 
           // Publish is being created at this node, not just forwardind,
           // so add it to DHT and propagate it through our whole topic tree
+          setPublishedEventStats(linkedEvent)
           store(dht, linkedEvent, cb)
         }
       ],
@@ -82,6 +83,7 @@ function createRPCHandlers(pulsarcastNode) {
             topic: topicB58Str,
             eventCID: eventCID.toBaseEncodedString()
           })
+          setReceivedEventStats(linkedEvent)
           pulsarcastNode.emit(topicB58Str, linkedEvent)
         }
         // log.trace('Got publish %j', {
@@ -264,7 +266,7 @@ function createRPCHandlers(pulsarcastNode) {
     //   op: rpc.op,
     //   to: peer.info.id.toB58String()
     // })
-    setStats(rpc)
+    setRPCStats(rpc)
 
     const rpcToSend = marshalling.marshall(rpc)
     const encodedMessage = RPC.encode({ msgs: [rpcToSend] })
@@ -290,7 +292,7 @@ function createRPCHandlers(pulsarcastNode) {
     eventTree.add(eventNode, cb)
   }
 
-  function setStats(rpc) {
+  function setRPCStats(rpc) {
     pulsarcastNode._stats.rpc.out++
     if (rpc.event) {
       const topicB58Str = rpc.event.topicCID.toBaseEncodedString()
@@ -299,6 +301,30 @@ function createRPCHandlers(pulsarcastNode) {
       }
       pulsarcastNode._stats.rpc.topics[topicB58Str].out++
     }
+  }
+
+  function setReceivedEventStats(eventNode) {
+    pulsarcastNode._stats.events.received++
+    const topicB58Str = eventNode.topicCID.toBaseEncodedString()
+    if (!pulsarcastNode._stats.events.topics[topicB58Str]) {
+      pulsarcastNode._stats.events.topics[topicB58Str] = {
+        received: 0,
+        published: 0
+      }
+    }
+    pulsarcastNode._stats.events.topics[topicB58Str].received++
+  }
+
+  function setPublishedEventStats(eventNode) {
+    pulsarcastNode._stats.events.published++
+    const topicB58Str = eventNode.topicCID.toBaseEncodedString()
+    if (!pulsarcastNode._stats.events.topics[topicB58Str]) {
+      pulsarcastNode._stats.events.topics[topicB58Str] = {
+        received: 0,
+        published: 0
+      }
+    }
+    pulsarcastNode._stats.events.topics[topicB58Str].published++
   }
 
   // function getEvent (topicCID, eventCID) {

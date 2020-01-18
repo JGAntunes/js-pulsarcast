@@ -114,7 +114,8 @@ class Pulsarcast extends EventEmitter {
 
     // TODO set this kind of logs behind a flag and with configurable period
     this._stats = {
-      rpc: { in: 0, out: 0, topics: {} }
+      rpc: { in: 0, out: 0, topics: {} },
+      events: { received: 0, published: 0, topics: {} }
     }
     setInterval(() => {
       // Topic tree state
@@ -122,6 +123,7 @@ class Pulsarcast extends EventEmitter {
         log.trace('Topic tree %j', {
           tree: true,
           topic: topicB58Str,
+          topicName: this.topics.get(topicB58Str).name,
           children: tree.children.map(child => child.info.id.toB58String()),
           childrenSize: tree.children.length,
           parents: tree.parents.map(parent => parent.info.id.toB58String()),
@@ -130,11 +132,20 @@ class Pulsarcast extends EventEmitter {
       }
 
       // Event tree state
-      for (let [topicB58Str, tree] of this.eventTrees.entries()) {
-        log.trace('Events %j', {
-          events: true,
+      log.trace('Events %j', {
+        events: true,
+        received: this._stats.events.received,
+        published: this._stats.events.published
+      })
+
+      for (let [topicB58Str, stats] of Object.entries(
+        this._stats.events.topics
+      )) {
+        log.trace('Events per topic %j', {
+          eventsTopics: true,
           topic: topicB58Str,
-          size: tree.eventMap.size
+          topicName: this.topics.get(topicB58Str).name,
+          ...stats
         })
       }
 
@@ -169,6 +180,7 @@ class Pulsarcast extends EventEmitter {
         log.trace('RPC IN/OUT %j', {
           rpcTopics: true,
           topic: topicB58Str,
+          topicName: this.topics.get(topicB58Str).name,
           ...stats
         })
       }
