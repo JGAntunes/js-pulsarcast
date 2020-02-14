@@ -52,6 +52,10 @@ Currently we're still relying on a couple of forks from `libp2p`/`ipfs` projects
 
 **Browser support** is still no guaranteed. All of the testing and development is currently being done on NodeJS only, although the plan is to have this done for the browser also :+1:
 
+## Performance and Metrics
+
+We've tested this module under different scenarios for the purpose of our M.Sc. Thesis. For more info check our [M.Sc. Thesis final document](https://github.com/JGAntunes/pulsarcast) and our [Pulsarcast Test Harness](https://github.com/JGAntunes/pulsarcast-test-harness) project.
+
 ## Supporters
 
 This module and relevant work detailed in the [Pulsarcast](https://github.com/JGAntunes/pulsarcast) spec has been developed by [me](https://jgantunes.com) with the amazing support and supervision of [Luís Veiga](https://www.gsd.inesc-id.pt/~lveiga/), in [INESC-ID Lisboa (Distributed Systems Group)](https://www.gsd.inesc-id.pt/) and [Instituto Superior Técnico, Universidade de Lisboa](https://tecnico.ulisboa.pt/)
